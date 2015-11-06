@@ -49,6 +49,26 @@ To compile this plugin, you need:
     Path to CMake file of `x86_adapt` for building purposes. Searches in `X86_ADAPT_DIR/library` for
     the header files and in `X86_ADAPT_DIR/build` for the library.
 
+* `MSR_STATIC` (default on)
+
+    Link `libmsr` statically.
+
+* `MSR_DIR`
+
+    Path to `libmsr` directory.
+
+* `MSR_INC`
+
+    Path to `libmsr` headers.
+
+* `MSR_LIB`
+
+    Path to `libmsr` library.
+
+* `BUILD_STATIC` (default off)
+
+    Build static `x86_energy` library.
+
 ###Building
 
 1. Create build directory
