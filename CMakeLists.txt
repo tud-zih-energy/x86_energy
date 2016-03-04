@@ -15,6 +15,13 @@ set(PLUGIN_SOURCE x86_energy.c rapl.c amd_fam15h_power.c)
 set(PLUGIN_HEADER x86_energy.h)
 
 
+file(GLOB FILES_IN_COMMON "common")
+list(LENGTH ${FILES_IN_COMMON} COUNT_FILES_IN_COMMON)
+if(${COUNT_FILES_IN_COMMON} EQUAL 0)
+	execute_process(COMMAND "git" "submodule" "init")
+	execute_process(COMMAND "git" "submodule" "update")
+endif()
+
 if(X86_ADAPT)
     include(common/FindX86_adapt.cmake)
     if(X86_ADAPT_FOUND)
