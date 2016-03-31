@@ -201,13 +201,18 @@ static code_name get_code_name(unsigned int family, unsigned int model) {
         case 0x3E:
             return IVY_SERVER;
         case 0x3C:
+        case 0x45:
+        case 0x46:
             return HSW_DESKTOP;
         case 0x3F:
             return HSW_SERVER;
         case 0x3D:
+        case 0x47:
             return BDW_DESKTOP;
         case 0x4F:
+        case 0x56:
             return BDW_SERVER;
+        case 0x4E:
         case 0x5E:
             return SKL_DESKTOP;
     }
@@ -632,6 +637,7 @@ static int rapl_init_device(int package_nr) {
     for (i=0;i<rapl_features.num;i++)
         pthread_mutex_init(&handle->rapl[i].mutex, NULL);
 
+  //TODO environment variable
     /* Initialize joule modifiers */
     for (i=0;i<rapl_features.num;i++){
       if ( ( this_code_name == HSW_SERVER ) && ( strstr(rapl_features.name[i],"ram") != NULL ) )
