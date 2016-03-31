@@ -46,7 +46,11 @@ typedef enum code_names {
     IVY_DESKTOP,
     IVY_SERVER,
     HSW_DESKTOP,
-    HSW_SERVER
+    HSW_SERVER,
+    BDW_DESKTOP,
+    BDW_SERVER,
+    SKL_DESKTOP,
+    SKL_SERVER
 } code_name;
 /* code name of this system if it is supported */
 static code_name this_code_name = UNSUPPORTED;
@@ -200,6 +204,12 @@ static code_name get_code_name(unsigned int family, unsigned int model) {
             return HSW_DESKTOP;
         case 0x3F:
             return HSW_SERVER;
+        case 0x3D:
+            return BDW_DESKTOP;
+        case 0x4F:
+            return BDW_SERVER;
+        case 0x5E:
+            return SKL_DESKTOP;
     }
     return UNSUPPORTED;
 }
@@ -224,6 +234,7 @@ static inline int has_feature(int feature) {
         case SB_SERVER:
         case IVY_SERVER:
         case HSW_SERVER:
+        case BDW_SERVER:
             switch(feature) {
                 case PACKAGE: return 1;
                 case PP0:     return 1;
@@ -235,6 +246,8 @@ static inline int has_feature(int feature) {
                 case RAM_3:   return 1;
             };
         case HSW_DESKTOP:
+        case BDW_DESKTOP:
+        case SKL_DESKTOP:
             switch(feature) {
                   case PACKAGE: return 1;
                   case PP0:     return 1;
