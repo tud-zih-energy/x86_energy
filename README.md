@@ -36,18 +36,25 @@ To compile this plugin, you need:
 
     Uses `x86_adapt` library instead of accessing `msr` directly.
 
-* `X86_ADAPT_INC`
+
+* `X86A_STATIC` (default on)
+
+    Link `x86_adapt` statically.
+
+* `X86A_DIR`
+
+    Path to `x86_adapt` directory.
+    Searches in `X86A_DIR/include` for the header files and in `X86A_DIR/lib` for the library.
+
+
+* `X86A_INC`
 
     Path to `x86_adapt` header files.
 
-* `X86_ADAPT_LIB`
+* `X86A_LIB`
 
     Path to `x86_adapt` library.
 
-* `X86_ADAPT_DIR`
-
-    Path to CMake file of `x86_adapt` for building purposes. Searches in `X86_ADAPT_DIR/library` for
-    the header files and in `X86_ADAPT_DIR/build` for the library.
 
 * `MSR_STATIC` (default on)
 
@@ -65,10 +72,6 @@ To compile this plugin, you need:
 
     Path to `libmsr` library.
 
-* `BUILD_STATIC` (default off)
-
-    Build static `x86_energy` library.
-
 ###Building
 
 1. Create build directory
@@ -82,7 +85,7 @@ To compile this plugin, you need:
 
     Example for using the `x86_adapt` library:
 
-        cmake .. -DX86_ADAPT=1 -DX86_ADAPT_DIR=~/Software/x86_adapt
+        cmake .. -DX86_ADAPT=1 -DX86A_DIR=~/Software/x86_adapt
 
 3. Invoking make
 

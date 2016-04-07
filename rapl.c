@@ -104,6 +104,7 @@ static const char *rapl_domains[NumberOfCounter] = {
         "dram_ch3"
 };
 
+static int new_joule_modifier = 0;
 
 /* this structure maps the public counter identifier to the internal counter register */
 struct ident_register_mapping {
@@ -484,6 +485,13 @@ static int rapl_init(int threaded) {
     if (check_cpuid())
         return check_cpuid();
 
+    /* this sets the new joule_modifier for newer server processors */
+    switch (this_code_name) {
+        case HSW_SERVER:
+        case BDW_SERVER:
+            new_joule_modifier = 1;
+    }
+
     /* initialize backends */
 #ifdef X86_ADAPT
     ret = x86_adapt_init();
@@ -640,16 +648,20 @@ static int rapl_init_device(int package_nr) {
   //TODO environment variable
     /* Initialize joule modifiers */
     for (i=0;i<rapl_features.num;i++){
-      if ( ( this_code_name == HSW_SERVER ) && ( strstr(rapl_features.name[i],"ram") != NULL ) )
+      if ( new_joule_modifier && ( strstr(rapl_features.name[i],"ram") != NULL ) ) {
         /* ram channels: this is not documented, but based on observations */
-        if (strstr(rapl_features.name[i],"ch") != NULL )
+        if (strstr(rapl_features.name[i],"ch") != NULL ) {
           handle->rapl[i].joule_modifier = 1.0 / pow(2.0, 18.0);
+        }
         /* ram: this is kind of documented (datasheet vol. 2 for e5-1600,2600,4600 v3)*/
-        else
+        else {
             handle->rapl[i].joule_modifier = 1.0 / pow(2.0, 16.0);
+        }
+      }
       /* default */
-      else
+      else {
           handle->rapl[i].joule_modifier = joule_modifier_general;
+      }
     }
     return ret;
 }
