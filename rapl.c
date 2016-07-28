@@ -490,6 +490,9 @@ static int rapl_init(int threaded) {
         case HSW_SERVER:
         case BDW_SERVER:
             new_joule_modifier = 1;
+            break;
+        default:
+            new_joule_modifier = 0;
     }
 
     /* initialize backends */
@@ -645,7 +648,7 @@ static int rapl_init_device(int package_nr) {
     for (i=0;i<rapl_features.num;i++)
         pthread_mutex_init(&handle->rapl[i].mutex, NULL);
 
-  //TODO environment variable
+    /* TODO add environment variable */
     /* Initialize joule modifiers */
     for (i=0;i<rapl_features.num;i++){
       if ( new_joule_modifier && ( strstr(rapl_features.name[i],"ram") != NULL ) ) {
