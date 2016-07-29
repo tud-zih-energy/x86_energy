@@ -166,7 +166,7 @@ static int amd_init(int threaded) {
     DIR *test = opendir("/sys/module/fam15h_power");
     if (test == NULL) {
         char b[256];
-        uint32_t nr_nb,i,val,in0=0;
+        uint32_t nr_nb,val,in0=0;
         FILE * f;
         int is_multinode;
 
@@ -199,7 +199,7 @@ static int amd_init(int threaded) {
         direct_pci=1;
         /* for multi-node socket */
         if (is_multinode) {
-            for (i=0;i<nr_packages;i++) {
+            for (int i=0;i<nr_packages;i++) {
                 sprintf(b,"/proc/bus/pci/00/%x.3",0x18+i);
                 f=fopen(b,"r");
                 if (pread(fileno(f),&val,4,REG_NORTHBRIDGE_CAPABILITIES)!=4){
@@ -215,7 +215,7 @@ static int amd_init(int threaded) {
         }
         /* for single-node other socket */
         else {
-            for (i=0;i<nr_packages;i++) {
+            for (int i=0;i<nr_packages;i++) {
                 sprintf(nb[i],"/proc/bus/pci/00/%x.5",0x18+(i*2));
             }
         }

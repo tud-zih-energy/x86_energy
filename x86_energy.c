@@ -106,7 +106,7 @@ int x86_energy_node_of_cpu(int __cpu) {
 
     for(node = 0; node < nr_packages; node++)
     {
-        int sz = snprintf(path, sizeof(path), "/sys/devices/system/node/node%d/cpu%d", node, __cpu);
+        size_t sz = snprintf(path, sizeof(path), "/sys/devices/system/node/node%d/cpu%d", node, __cpu);
         assert(sz < sizeof(path));
         struct stat stat_buf;
         int stat_ret = stat(path, &stat_buf);

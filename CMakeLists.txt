@@ -62,7 +62,7 @@ endif()
 
 
 #additional c flags
-set(CMAKE_C_FLAGS "-fPIC")
+set(CMAKE_C_FLAGS "-fPIC -std=gnu11")
 #debugging c flags
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0 -Wstrict-prototypes -Wall -Wundef -Wno-long-long -Wsign-compare -Wcomment -pedantic -finline-functions -fno-strict-aliasing")
 #release c flags
