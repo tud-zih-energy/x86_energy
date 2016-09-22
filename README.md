@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/tud-zih-energy/x86_energy.svg?branch=master)](https://travis-ci.org/tud-zih-energy/x86_energy)
+
 #MSR & X86-Energy Libraries for Score-P (and VampirTrace)
 
 The `msr` library faciliates to reduce the number of open file handles to `/dev/*/msr` when multiple
