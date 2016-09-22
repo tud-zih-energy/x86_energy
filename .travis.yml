@@ -1,7 +1,4 @@
 language: c
 script:
 - mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Debug .. && cmake --build .
-addons:
- apt:
-   packages:
-   - gcc-5
+dist: trusty
