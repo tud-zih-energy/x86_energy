@@ -3,7 +3,5 @@ script:
 - mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Debug .. && cmake --build .
 addons:
  apt:
-   sources:
-   - xenial
    packages:
    - gcc-5
