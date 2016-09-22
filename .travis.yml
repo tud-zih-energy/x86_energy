@@ -1,4 +1,9 @@
 language: c
 script:
 - mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Debug .. && cmake --build .
-dist: xenial
+addons:
+ apt:
+   sources:
+   - xenial
+   packages:
+   - gcc-5
