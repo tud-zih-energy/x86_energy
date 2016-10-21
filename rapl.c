@@ -144,10 +144,6 @@ struct rapl_setting {
     int      overflow_enabled;
     /* joule modifier is a constant which is multiplied with the raw counter value to geht the counter value in joule */
     double joule_modifier;
-#ifndef X86_ADAPT
-    /* msr handles of the msr library */
-    struct msr_handle msr_pckg;
-#endif
 }__attribute__((aligned(64)));
 
 
@@ -334,8 +330,8 @@ static inline void handle_overflow(int package_nr, int ident) {
     }
 
 #else
-    read_msr(&rapl->msr_pckg);
-    data = rapl->msr_pckg.data;
+    read_msr(&handle->msr_pckg[ident]);
+    data = handle->msr_pckg[ident].data;
 #endif
     /* important are lower 32 bits */
     data &= 0xFFFFFFFF;
