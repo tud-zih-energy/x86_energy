@@ -7,8 +7,8 @@ plugins are used. This is done by reference counting on the file descriptors.
 
 The `x86_energy` library allows to count power and energy values for Intel Sandybridge, AMD Bulldozer
 and newer architectures. It supports reading `msr` registers directly or through the `x86_adapt`
-library on Intel Sandybridge. None of them is needed for reading power and energy values on
-AMD Bulldozer CPUs.
+library on Intel processors. If both of them are not available or the privilige is not sufficient 
+it fallsback to `powercap` values. None of them is needed for reading power and energy values on AMD Bulldozer CPUs.
 
 ##Compilation and Installation
 
