@@ -27,6 +27,9 @@
 #include <string.h>
 #include <assert.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <dirent.h>
+#include <inttypes.h>
 
 #include "x86_energy.h"
 
@@ -105,6 +108,8 @@ static const char *rapl_domains[NumberOfCounter] = {
 };
 
 static int new_joule_modifier = 0;
+static int fallback_rapl = 0;
+static FILE* *fallback_fds;
 
 /* this structure maps the public counter identifier to the internal counter register */
 struct ident_register_mapping {
@@ -160,6 +165,7 @@ struct per_die_rapl {
 #else
     struct msr_handle msr_pckg[NumberOfCounter];
 #endif
+    FILE* fallback_fd[NumberOfCounter];
 }__attribute__((aligned(64)));
 static struct per_die_rapl * rapl_handles;
 
@@ -220,6 +226,11 @@ static code_name get_code_name(unsigned int family, unsigned int model) {
  * Checks which plattform specific features are avaible.
  */
 static inline int has_feature(int feature) {
+    /* only if the openning  of the file descriptor was successfull the feature is available */
+    if (fallback_rapl) {
+        return fallback_fds[feature] != NULL;
+    }
+
     switch(this_code_name) {
         case SB_DESKTOP:
         case IVY_DESKTOP:
@@ -265,6 +276,101 @@ static inline int has_feature(int feature) {
     };
     return 0;
 }
+
+/**
+ * resolves powercap name to internal identifier
+ */
+static int get_fallback_ident(char* name) {
+    for (int i = 0; i<NumberOfCounter; i++) {
+        if (!strncmp(name, rapl_domains[i], strlen(rapl_domains[i]))) {
+            return i;
+        }
+    }
+    /* in powercap gpu is labeled as uncore, the rest stays the same */
+    if (!strncmp(name, "uncore", strlen("uncore"))) {
+        return PP1;
+    }
+        
+    return -1;
+}
+
+/**
+ * parses the name of the powercap sysfs structure and opens the file descriptor
+ */
+static void build_fallback_item(char* _path, char* dir, int package) {
+    struct dirent **namelist;
+    int n, ident;
+    char path[128] = {0};
+    char item_path[128] = {0};
+    char name[64];
+    sprintf(path, "%s/%s", _path, dir);
+    sprintf(item_path, "%s/%s", path, "name");
+
+    int fd = open(item_path, O_RDONLY);
+    if (fd < 1) {
+        return;
+    }
+    read(fd, name, 64);
+    
+    /* if the package is -1, then we are at the root of the package
+     * and should extract the package number */
+    if (package == -1) {
+        package = atoi(name + strlen("package-"));
+    }
+    ident = get_fallback_ident(name);
+
+    if (ident >= 0) {
+        sprintf(item_path, "%s/%s", path, "energy_uj");
+        fallback_fds[package * NumberOfCounter + ident] = fopen(item_path, "r");
+    }
+    
+
+    n = scandir(path, &namelist, NULL, alphasort);
+    while(n--) {
+        if( !strncmp(namelist[n]->d_name, "intel-rapl", 10) ) {
+            build_fallback_item(path, namelist[n]->d_name, package);
+        }
+        free(namelist[n]);
+    }
+    free(namelist);
+}
+
+/**
+ * tests if the fallback tree is available and builds it
+ */
+static int build_fallback_tree() {
+    struct dirent **namelist;
+    int n, ret;
+    char *path = "/sys/devices/virtual/powercap/intel-rapl";
+
+    DIR *test = opendir(path);
+    if (test != NULL) {
+        closedir(test);
+        
+        fallback_fds = calloc(nr_packages * NumberOfCounter, sizeof(FILE*));
+        if (!fallback_fds) {
+            fprintf(stderr,"X86_ENERGY: Could NOT allocate memory for fallback_fds\n");
+            return -1;
+        }
+
+        n = scandir(path, &namelist, NULL, alphasort);
+        while(n--) {
+            if( !strncmp(namelist[n]->d_name, "intel-rapl", 10) ) {
+                build_fallback_item(path, namelist[n]->d_name, -1);
+            }
+            free(namelist[n]);
+        }
+        free(namelist);
+        
+    }
+    else {
+        fprintf(stderr,"X86_ENERGY: Could NOT find powercap directory\n");
+        return -1;
+    }
+
+    return 0;
+}
+
 
 #define INTEL_EBX 0x756e6547
 #define INTEL_EDX 0x49656e69
@@ -316,8 +422,13 @@ static inline void handle_overflow(int package_nr, int ident) {
     }
     rapl->overflow_time = gettime_in_us();
 
-#ifdef X86_ADAPT
+    if (fallback_rapl) {
+        fscanf(handle->fallback_fd[ident], "%"SCNd64"\n", &rapl->overflow_value);
+        rewind(handle->fallback_fd[ident]);
+        return;
+    }
 
+#ifdef X86_ADAPT
     /* read from /dev/x86_adapt/cpu */
     if (ident_reg_map[ident].device_type == X86_ADAPT_CPU) {
         x86_adapt_get_setting(handle->fd_cpu, ident_reg_map[ident].counter_register,
@@ -359,6 +470,12 @@ static inline int calculate_joule_modifier(void) {
     uint64_t modifier_u64;
     double modifier_dbl;
 
+    /* powercap is in micro joule and we have to scale it to joule */
+    if (fallback_rapl) {
+        joule_modifier_general = 0.000001;
+        return 0;
+    }
+
   /* calculate the joule modifier */
 #ifdef X86_ADAPT
     int fd;
@@ -377,9 +494,18 @@ static inline int calculate_joule_modifier(void) {
     }
     x86_adapt_put_device(X86_ADAPT_CPU, 0);
 #else
+    int ret;
     struct msr_handle msr_rapl_power_unit;
-    open_msr(0,MSR_RAPL_POWER_UNIT,&msr_rapl_power_unit);
-    read_msr(&msr_rapl_power_unit);
+    ret = open_msr(0,MSR_RAPL_POWER_UNIT,&msr_rapl_power_unit);
+    if (ret) {
+        fprintf(stderr, "X86_ENERGY: failed to open msr file descriptor\n");
+        return ret;
+    }
+    ret = read_msr(&msr_rapl_power_unit);
+    if (ret) {
+        fprintf(stderr, "X86_ENERGY: failed to read msr\n");
+        return ret;
+    }
     modifier_u64=msr_rapl_power_unit.data;
     close_msr(msr_rapl_power_unit);
 #endif
@@ -481,6 +607,8 @@ static int rapl_init(int threaded) {
     if (check_cpuid())
         return check_cpuid();
 
+    nr_packages = x86_energy_get_nr_packages();
+
     /* this sets the new joule_modifier for newer server processors */
     switch (this_code_name) {
         case HSW_SERVER:
@@ -499,8 +627,14 @@ static int rapl_init(int threaded) {
     ret = init_msr(O_RDONLY);
 #endif
 
-    if (ret)
-        return ret;
+    if (ret) {
+        fprintf(stderr, "X86_ENERGY: falling back to sysfs rapl values\n");
+        fallback_rapl = 1;
+        threaded = 0;
+        if( build_fallback_tree() ) {
+            return -1;
+        }
+    }
 
     /* count numer of features */
     for (i=0,found_features=0;i<NumberOfCounter;i++) {
@@ -538,39 +672,45 @@ static int rapl_init(int threaded) {
     for (i=0,found_features=0;i<NumberOfCounter;i++) {
         if (has_feature(i)) {
            rapl_features.name[found_features] = strdup(rapl_domains[i]);
-           rapl_features.ident[found_features] = found_features;
+           rapl_features.ident[found_features] = found_features; 
+
+           if (fallback_rapl) {
+               ident_reg_map[found_features].counter_register = i;
+               found_features++;
+           }
+           else {
 #ifdef X86_ADAPT
-            /* try to look up cpu feature */
-            int citem = x86_adapt_lookup_ci_name(X86_ADAPT_CPU, counter_ci_names[i]);
-            /* it is a cpu feature */
-            if (citem >= 0) {
-                ident_reg_map[found_features].device_type = X86_ADAPT_CPU;
-                ident_reg_map[found_features].counter_register = citem;
-                found_features++;
-            }
-            /* check if it is a die feature */
-            else {
-                citem = x86_adapt_lookup_ci_name(X86_ADAPT_DIE, counter_ci_names[i]);
+                /* try to look up cpu feature */
+                int citem = x86_adapt_lookup_ci_name(X86_ADAPT_CPU, counter_ci_names[i]);
+                /* it is a cpu feature */
                 if (citem >= 0) {
-                    uncore_registers_available = 1;
-                    ident_reg_map[found_features].device_type = X86_ADAPT_DIE;
+                    ident_reg_map[found_features].device_type = X86_ADAPT_CPU;
                     ident_reg_map[found_features].counter_register = citem;
                     found_features++;
                 }
+                /* check if it is a die feature */
                 else {
-                    fprintf(stderr, "X86_ENERGY: Failed to get citem %s. Removing from rapl_features.\n",counter_ci_names[i]);
-                    free(rapl_features.name[found_features]);
-                    rapl_features.num--;
+                    citem = x86_adapt_lookup_ci_name(X86_ADAPT_DIE, counter_ci_names[i]);
+                    if (citem >= 0) {
+                        uncore_registers_available = 1;
+                        ident_reg_map[found_features].device_type = X86_ADAPT_DIE;
+                        ident_reg_map[found_features].counter_register = citem;
+                        found_features++;
+                    }
+                    else {
+                        fprintf(stderr, "X86_ENERGY: Failed to get citem %s. Removing from rapl_features.\n",counter_ci_names[i]);
+                        free(rapl_features.name[found_features]);
+                        rapl_features.num--;
+                    }
                 }
-            }
 #else
-            ident_reg_map[found_features].counter_register = msr_counter_register[i];
-            found_features++;
+                ident_reg_map[found_features].counter_register = msr_counter_register[i];
+                found_features++;
 #endif
+            }
         }
     }
 
-    nr_packages = x86_energy_get_nr_packages();
 
     /* allocate space for the handles */
     rapl_handles=calloc(nr_packages, sizeof(struct per_die_rapl));
@@ -579,8 +719,9 @@ static int rapl_init(int threaded) {
         return -1;
     }
 
-    if( (ret = calculate_joule_modifier()) )
-        return ret;
+    if( calculate_joule_modifier() ) {
+        return -1;
+    }
 
     /* create thread that checks if an overflow occured */
     return (threaded) ? pthread_create(&thread, NULL, &prevent_overflow, NULL) : 0;
@@ -613,8 +754,38 @@ static int rapl_init_device(int package_nr) {
         fprintf(stderr,"X86_ENERGY: Run init() BEFORE init_device\n");
         exit(-1);
     }
-
     handle = &rapl_handles[package_nr];
+
+    for (i=0;i<rapl_features.num;i++) {
+        /* Initialize mutexes */
+        pthread_mutex_init(&handle->rapl[i].mutex, NULL);
+        /* Initialize joule modifiers */
+        if ( !fallback_rapl &&
+            new_joule_modifier && 
+            ( strstr(rapl_features.name[i],"ram") != NULL ) ) {
+            /* ram channels: this is not documented, but based on observations */
+            if (strstr(rapl_features.name[i],"ch") != NULL ) {
+              handle->rapl[i].joule_modifier = 1.0 / pow(2.0, 18.0);
+            }
+            /* ram: this is kind of documented (datasheet vol. 2 for e5-1600,2600,4600 v3)*/
+            else {
+                handle->rapl[i].joule_modifier = 1.0 / pow(2.0, 16.0);
+            }
+        }
+          /* default */
+        else {
+            handle->rapl[i].joule_modifier = joule_modifier_general;
+        }
+    }
+
+    /* every file descriptor is already openend, nothing todo here */
+    if (fallback_rapl) {
+        for (i=0;i<rapl_features.num;i++) {
+            handle->fallback_fd[i] = 
+                fallback_fds[package_nr * NumberOfCounter + ident_reg_map[i].counter_register];
+        }
+        return 0;
+    }
 
     /* open adapt file descriptors */
 #ifdef X86_ADAPT
@@ -640,28 +811,6 @@ static int rapl_init_device(int package_nr) {
     }
 #endif
 
-    /* Initialize mutexes */
-    for (i=0;i<rapl_features.num;i++)
-        pthread_mutex_init(&handle->rapl[i].mutex, NULL);
-
-    /* TODO add environment variable */
-    /* Initialize joule modifiers */
-    for (i=0;i<rapl_features.num;i++){
-      if ( new_joule_modifier && ( strstr(rapl_features.name[i],"ram") != NULL ) ) {
-        /* ram channels: this is not documented, but based on observations */
-        if (strstr(rapl_features.name[i],"ch") != NULL ) {
-          handle->rapl[i].joule_modifier = 1.0 / pow(2.0, 18.0);
-        }
-        /* ram: this is kind of documented (datasheet vol. 2 for e5-1600,2600,4600 v3)*/
-        else {
-            handle->rapl[i].joule_modifier = 1.0 / pow(2.0, 16.0);
-        }
-      }
-      /* default */
-      else {
-          handle->rapl[i].joule_modifier = joule_modifier_general;
-      }
-    }
     return ret;
 }
 
@@ -736,6 +885,10 @@ static int rapl_fini(void) {
     rapl_features.ident = NULL;
     free(ident_reg_map);
     ident_reg_map = NULL;
+
+    if (fallback_rapl) {
+        free(fallback_fds);
+    }
 
 #ifdef X86_ADAPT
     x86_adapt_finalize();

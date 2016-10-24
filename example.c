@@ -19,7 +19,7 @@ int main() {
             for (j = 0; j < source->plattform_features->num; j++) {
 			    printf("Power for %s on package %d: %f\n", 
                         source->plattform_features->name[j],
-                        i, source->get_power(i, j));
+                        i, source->get_power(i, source->plattform_features->ident[j]));
             }
         }
 		sleep(1);
