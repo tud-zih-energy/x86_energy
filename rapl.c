@@ -763,16 +763,10 @@ static int rapl_init_device(int package_nr) {
         if ( !fallback_rapl &&
             new_joule_modifier && 
             ( strstr(rapl_features.name[i],"ram") != NULL ) ) {
-            /* ram channels: this is not documented, but based on observations */
-            if (strstr(rapl_features.name[i],"ch") != NULL ) {
-              handle->rapl[i].joule_modifier = 1.0 / pow(2.0, 18.0);
-            }
-            /* ram: this is kind of documented (datasheet vol. 2 for e5-1600,2600,4600 v3)*/
-            else {
-                handle->rapl[i].joule_modifier = 1.0 / pow(2.0, 16.0);
-            }
+            /* ram: this is documented (datasheet vol. 2 for e5-1600,2600,4600 v3)*/
+            handle->rapl[i].joule_modifier = 1.0 / pow(2.0, 16.0);
         }
-          /* default */
+        /* default */
         else {
             handle->rapl[i].joule_modifier = joule_modifier_general;
         }
