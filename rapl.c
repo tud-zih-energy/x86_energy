@@ -53,7 +53,8 @@ typedef enum code_names {
     BDW_DESKTOP,
     BDW_SERVER,
     SKL_DESKTOP,
-    SKL_SERVER
+    SKL_SERVER,
+    KNL_SERVER
 } code_name;
 /* code name of this system if it is supported */
 static code_name this_code_name = UNSUPPORTED;
@@ -218,6 +219,8 @@ static code_name get_code_name(unsigned int family, unsigned int model) {
         case 0x4E:
         case 0x5E:
             return SKL_DESKTOP;
+        case 0x57:
+            return KNL_SERVER;
     }
     return UNSUPPORTED;
 }
@@ -244,6 +247,19 @@ static inline int has_feature(int feature) {
                 case RAM_2:   return 0;
                 case RAM_3:   return 0;
             };
+        case HSW_DESKTOP:
+        case BDW_DESKTOP:
+        case SKL_DESKTOP:
+            switch(feature) {
+                  case PACKAGE: return 1;
+                  case PP0:     return 1;
+                  case PP1:     return 1;
+                  case RAM:     return 1;
+                  case RAM_0:   return 0;
+                  case RAM_1:   return 0;
+                  case RAM_2:   return 0;
+                  case RAM_3:   return 0;
+            };
         case SB_SERVER:
         case IVY_SERVER:
         case HSW_SERVER:
@@ -258,19 +274,17 @@ static inline int has_feature(int feature) {
                 case RAM_2:   return 1;
                 case RAM_3:   return 1;
             };
-        case HSW_DESKTOP:
-        case BDW_DESKTOP:
-        case SKL_DESKTOP:
+        case KNL_SERVER:
             switch(feature) {
-                  case PACKAGE: return 1;
-                  case PP0:     return 1;
-                  case PP1:     return 1;
-                  case RAM:     return 1;
-                  case RAM_0:   return 0;
-                  case RAM_1:   return 0;
-                  case RAM_2:   return 0;
-                  case RAM_3:   return 0;
-          };
+                case PACKAGE: return 1;
+                case PP0:     return 0;
+                case PP1:     return 0;
+                case RAM:     return 1;
+                case RAM_0:   return 0;
+                case RAM_1:   return 0;
+                case RAM_2:   return 0;
+                case RAM_3:   return 0;
+            };
         default:
             return 0;
     };
