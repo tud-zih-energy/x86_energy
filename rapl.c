@@ -481,18 +481,18 @@ static inline int calculate_joule_modifier(void) {
     int fd;
     int citem;
 
-    fd = x86_adapt_get_device_ro(X86_ADAPT_CPU, 0);
+    fd = x86_adapt_get_device_ro(X86_ADAPT_DIE, 0);
     if (fd<0) {
         fprintf(stderr, "X86_ENERGY: failed to get adapt device (%i: %s)\n", fd, strerror(errno));
         return fd;
     }
-    citem = x86_adapt_lookup_ci_name(X86_ADAPT_CPU,"Intel_RAPL_Power_Unit");
+    citem = x86_adapt_lookup_ci_name(X86_ADAPT_DIE,"Intel_RAPL_Power_Unit");
     x86_adapt_get_setting(fd, citem, &modifier_u64);
     if (citem < 0) {
         fprintf(stderr, "X86_ENERGY: Failed to get Intel_RAPL_Power_Unit\n");
         return citem;
     }
-    x86_adapt_put_device(X86_ADAPT_CPU, 0);
+    x86_adapt_put_device(X86_ADAPT_DIE, 0);
 #else
     int ret;
     struct msr_handle msr_rapl_power_unit;
