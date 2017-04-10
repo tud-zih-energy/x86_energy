@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.org/tud-zih-energy/x86_energy.svg?branch=master)](https://travis-ci.org/tud-zih-energy/x86_energy)
 
-#MSR & X86-Energy Libraries for Score-P (and VampirTrace)
+# MSR & X86-Energy Libraries for Score-P (and VampirTrace)
 
 The `msr` library faciliates to reduce the number of open file handles to `/dev/*/msr` when multiple
 plugins are used. This is done by reference counting on the file descriptors.
@@ -10,9 +10,9 @@ and newer architectures. It supports reading `msr` registers directly or through
 library on Intel processors. If both of them are not available or the privilige is not sufficient 
 it fallsback to `powercap` values. None of them is needed for reading power and energy values on AMD Bulldozer CPUs.
 
-##Compilation and Installation
+## Compilation and Installation
 
-###Prerequisites
+### Prerequisites
 
 To compile this plugin, you need:
 
@@ -32,7 +32,7 @@ To compile this plugin, you need:
     The kernel module `x86_adapt_driver` should be active and and should have reading access to
     `/dev/x86_adapt/cpu/*`.
 
-###Build Options
+### Build Options
 
 * `X86_ADAPT` (default off)
 
@@ -74,7 +74,7 @@ To compile this plugin, you need:
 
     Path to `libmsr` library.
 
-###Building
+### Building
 
 1. Create build directory
 
@@ -97,9 +97,9 @@ To compile this plugin, you need:
 
         export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:`pwd`
 
-##Usage
+## Usage
 
-###If anything fails
+### If anything fails
 
 1. Check whether the libraries can be loaded from the `LD_LIBRARY_PATH`.
 
@@ -107,7 +107,7 @@ To compile this plugin, you need:
 
 3. Write a mail to the author.
 
-##Authors
+## Authors
 
 * Robert Schoene (robert.schoene at tu-dresden dot de)
 
