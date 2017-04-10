@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <assert.h>
+#include <unistd.h> // for sleep()
 
 #include "x86_energy/x86_energy.h"
 
