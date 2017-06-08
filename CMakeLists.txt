@@ -15,8 +15,8 @@ file(GLOB FILES_IN_COMMON "common")
 list(LENGTH ${FILES_IN_COMMON} COUNT_FILES_IN_COMMON)
 if(${COUNT_FILES_IN_COMMON} EQUAL 0)
         message(STATUS "Initializing git submodule")
-	execute_process(COMMAND "git" "submodule" "init" WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
-	execute_process(COMMAND "git" "submodule" "update" WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+        execute_process(COMMAND "git" "submodule" "init" WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+        execute_process(COMMAND "git" "submodule" "update" WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 endif()
 
 if(X86_ADAPT)
@@ -79,7 +79,19 @@ set(TARGET ${CMAKE_BINARY_DIR}/lib${PROJECT_NAME}_static.a)
 if(X86_ADAPT)
     set(USED_SOURCE ${X86_ADAPT_LIB_DIR}/libx86_adapt_static.a)
 else()
-    set(USED_SOURCE ${MSR_LIB_DIR}/libmsr_static.a)
+    if(MSR_FOUND)
+        # libmsr is already installed on this system so we want to find it
+        # we hope that also the static library was built and installled
+        find_path(MSR_LIB_STATIC_DIR libmsr_static.a HINTS ${MSR_LIB} ${MSR_DIR}/lib ENV LD_LIBRARY_PATH DOC "Path to static libmsr")
+    else()
+        # Build static library if necessary
+        if(NOT MSR_STATIC)
+            add_library(msr_static STATIC ${MSR_SOURCE})
+        endif()
+        set(MSR_LIB_STATIC_DIR ${CMAKE_CURRENT_BINARY_DIR})
+    endif()
+
+    set(USED_SOURCE ${MSR_LIB_STATIC_DIR}/libmsr_static.a)
 endif()
 set(STATIC_LIBS ${CMAKE_BINARY_DIR}/lib${PROJECT_NAME}_dummy.a ${USED_SOURCE})
 
