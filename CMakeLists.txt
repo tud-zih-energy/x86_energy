@@ -14,9 +14,12 @@ set(LINK_LIBS pthread m)
 file(GLOB FILES_IN_COMMON "common")
 list(LENGTH ${FILES_IN_COMMON} COUNT_FILES_IN_COMMON)
 if(${COUNT_FILES_IN_COMMON} EQUAL 0)
-	execute_process(COMMAND "git" "submodule" "init")
-	execute_process(COMMAND "git" "submodule" "update")
+        message(STATUS "Initializing git submodule")
+        execute_process(COMMAND "git" "submodule" "init" WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+        execute_process(COMMAND "git" "submodule" "update" WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
 endif()
+
+set (CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/common;${CMAKE_MODULE_PATH}")
 
 if(X86_ADAPT)
     if(X86A_STATIC)
@@ -24,7 +27,7 @@ if(X86_ADAPT)
     else()
         set(LIBX86A_NAME libx86_adapt.so)
     endif()
-    include(common/FindX86Adapt.cmake)
+    include(FindX86Adapt)
     if(X86_ADAPT_FOUND)
         include_directories(${X86_ADAPT_INC_DIR})
         link_directories(${X86_ADAPT_LIB_DIR})
@@ -42,7 +45,7 @@ if(NOT X86_ADAPT_FOUND OR NOT X86_ADAPT)
     else()
         set(LIBMSR_NAME libmsr.so)
     endif()
-    include(common/FindMSR.cmake)
+    include(FindMSR)
     if(MSR_FOUND)
         include_directories(${MSR_INC_DIR})
         link_directories(${MSR_LIB_DIR})
@@ -68,10 +71,37 @@ set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0 -Wstrict-prototypes -Wall -W
 #release c flags
 set(CMAKE_C_FLAGS_RELEASE "-O2")
 
-add_library(${PROJECT_NAME}_static STATIC ${PLUGIN_SOURCE})
+#build shared library
+add_library(${PROJECT_NAME}_dummy STATIC ${PLUGIN_SOURCE})
 add_library(${PROJECT_NAME} SHARED ${PLUGIN_SOURCE})
-
 target_link_libraries(${PROJECT_NAME} ${LINK_LIBS})
 
-install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_static DESTINATION lib)
+# now some magic to merge static libraries adapted from libadapt
+set(TARGET ${CMAKE_BINARY_DIR}/lib${PROJECT_NAME}_static.a)
+if(X86_ADAPT)
+    set(USED_SOURCE ${X86_ADAPT_LIB_DIR}/libx86_adapt_static.a)
+else()
+    if(MSR_FOUND)
+        # libmsr is already installed on this system so we want to find it
+        # we hope that also the static library was built and installled
+        find_path(MSR_LIB_STATIC_DIR libmsr_static.a HINTS ${MSR_LIB} ${MSR_DIR}/lib ENV LD_LIBRARY_PATH DOC "Path to static libmsr")
+    else()
+        # Build static library if necessary
+        if(NOT MSR_STATIC)
+            add_library(msr_static STATIC ${MSR_SOURCE})
+        endif()
+        set(MSR_LIB_STATIC_DIR ${CMAKE_CURRENT_BINARY_DIR})
+    endif()
+
+    set(USED_SOURCE ${MSR_LIB_STATIC_DIR}/libmsr_static.a)
+endif()
+set(STATIC_LIBS ${CMAKE_BINARY_DIR}/lib${PROJECT_NAME}_dummy.a ${USED_SOURCE})
+
+add_custom_target(${PROJECT_NAME}_static ALL
+    COMMAND ./merge_static_libs.sh ${TARGET} ${STATIC_LIBS}
+    DEPENDS ${PROJECT_NAME}_dummy
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+
+install(TARGETS ${PROJECT_NAME} DESTINATION lib)
+install(FILES ${TARGET} DESTINATION lib)
 install(FILES ${PLUGIN_HEADER} DESTINATION include)
