@@ -221,6 +221,8 @@ static code_name get_code_name(unsigned int family, unsigned int model) {
             return SKL_DESKTOP;
         case 0x57:
             return KNL_SERVER;
+        case 0x55:
+            return SKL_SERVER;
     }
     return UNSUPPORTED;
 }
