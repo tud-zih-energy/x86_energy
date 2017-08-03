@@ -266,6 +266,7 @@ static inline int has_feature(int feature) {
         case IVY_SERVER:
         case HSW_SERVER:
         case BDW_SERVER:
+        case SKL_SERVER:
             switch(feature) {
                 case PACKAGE: return 1;
                 case PP0:     return 1;
