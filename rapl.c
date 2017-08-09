@@ -307,7 +307,7 @@ static int get_fallback_ident(char* name) {
     if (!strncmp(name, "uncore", strlen("uncore"))) {
         return PP1;
     }
-        
+
     return -1;
 }
 
@@ -328,7 +328,7 @@ static void build_fallback_item(char* _path, char* dir, int package) {
         return;
     }
     read(fd, name, 64);
-    
+
     /* if the package is -1, then we are at the root of the package
      * and should extract the package number */
     if (package == -1) {
@@ -340,7 +340,7 @@ static void build_fallback_item(char* _path, char* dir, int package) {
         sprintf(item_path, "%s/%s", path, "energy_uj");
         fallback_fds[package * NumberOfCounter + ident] = fopen(item_path, "r");
     }
-    
+
 
     n = scandir(path, &namelist, NULL, alphasort);
     while(n--) {
@@ -363,7 +363,7 @@ static int build_fallback_tree() {
     DIR *test = opendir(path);
     if (test != NULL) {
         closedir(test);
-        
+
         fallback_fds = calloc(nr_packages * NumberOfCounter, sizeof(FILE*));
         if (!fallback_fds) {
             fprintf(stderr,"X86_ENERGY: Could NOT allocate memory for fallback_fds\n");
@@ -378,7 +378,7 @@ static int build_fallback_tree() {
             free(namelist[n]);
         }
         free(namelist);
-        
+
     }
     else {
         fprintf(stderr,"X86_ENERGY: Could NOT find powercap directory\n");
@@ -630,6 +630,7 @@ static int rapl_init(int threaded) {
     switch (this_code_name) {
         case HSW_SERVER:
         case BDW_SERVER:
+        case SKL_SERVER:
             new_joule_modifier = 1;
             break;
         default:
@@ -689,7 +690,7 @@ static int rapl_init(int threaded) {
     for (i=0,found_features=0;i<NumberOfCounter;i++) {
         if (has_feature(i)) {
            rapl_features.name[found_features] = strdup(rapl_domains[i]);
-           rapl_features.ident[found_features] = found_features; 
+           rapl_features.ident[found_features] = found_features;
 
            if (fallback_rapl) {
                ident_reg_map[found_features].counter_register = i;
@@ -778,7 +779,7 @@ static int rapl_init_device(int package_nr) {
         pthread_mutex_init(&handle->rapl[i].mutex, NULL);
         /* Initialize joule modifiers */
         if ( !fallback_rapl &&
-            new_joule_modifier && 
+            new_joule_modifier &&
             ( strstr(rapl_features.name[i],"ram") != NULL ) ) {
             /* ram: this is documented (datasheet vol. 2 for e5-1600,2600,4600 v3)*/
             handle->rapl[i].joule_modifier = 1.0 / pow(2.0, 16.0);
@@ -792,7 +793,7 @@ static int rapl_init_device(int package_nr) {
     /* every file descriptor is already openend, nothing todo here */
     if (fallback_rapl) {
         for (i=0;i<rapl_features.num;i++) {
-            handle->fallback_fd[i] = 
+            handle->fallback_fd[i] =
                 fallback_fds[package_nr * NumberOfCounter + ident_reg_map[i].counter_register];
         }
         return 0;
