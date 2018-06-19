@@ -18,8 +18,6 @@ To compile this plugin, you need:
 
 * GCC compiler
 
-* `libpthread`
-
 * CMake
 
 * Reading `msr` directly:
@@ -34,46 +32,18 @@ To compile this plugin, you need:
 
 ### Build Options
 
-* `X86_ADAPT` (default off)
+* `X86_ADAPT` (default OFF)
 
-    Uses `x86_adapt` library instead of accessing `msr` directly.
+    uses x86_adapt to build x86_energy
 
+* `LIBMSR` (default OFF)
 
-* `X86A_STATIC` (default on)
+    uses libmsr to build x86_energy
 
-    Link `x86_adapt` statically.
-
-* `X86A_DIR`
-
-    Path to `x86_adapt` directory.
-    Searches in `X86A_DIR/include` for the header files and in `X86A_DIR/lib` for the library.
-
-
-* `X86A_INC`
-
-    Path to `x86_adapt` header files.
-
-* `X86A_LIB`
-
-    Path to `x86_adapt` library.
-
-
-* `MSR_STATIC` (default on)
-
-    Link `libmsr` statically.
-
-* `MSR_DIR`
-
-    Path to `libmsr` directory.
-
-* `MSR_INC`
-
-    Path to `libmsr` headers.
-
-* `MSR_LIB`
-
-    Path to `libmsr` library.
-
+* `CMAKE_PREFIX_PATH`
+    
+    directories to search fir libraries
+    
 ### Building
 
 1. Create build directory
@@ -87,7 +57,7 @@ To compile this plugin, you need:
 
     Example for using the `x86_adapt` library:
 
-        cmake .. -DX86_ADAPT=1 -DX86A_DIR=~/Software/x86_adapt
+        cmake .. -DX86_ADAPT=ON
 
 3. Invoking make
 
