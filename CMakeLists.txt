@@ -1,107 +1,129 @@
 cmake_minimum_required(VERSION 2.8)
 project(x86_energy)
 
-option(MSR_STATIC "Link msr library static." ON)
 option(X86_ADAPT "Enables x86_adapt support" OFF)
-option(X86A_STATIC "Link x86_adapt library static." ON)
+option(LIBMSR "Enables lib msr support" OFF)
 
-set(X86_ADAPT_FOUND false)
-
-set(PLUGIN_SOURCE x86_energy.c rapl.c amd_fam15h_power.c)
-set(PLUGIN_HEADER x86_energy.h)
-set(LINK_LIBS pthread m)
-
-file(GLOB FILES_IN_COMMON "common")
-list(LENGTH ${FILES_IN_COMMON} COUNT_FILES_IN_COMMON)
-if(${COUNT_FILES_IN_COMMON} EQUAL 0)
-        message(STATUS "Initializing git submodule")
-        execute_process(COMMAND "git" "submodule" "init" WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
-        execute_process(COMMAND "git" "submodule" "update" WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+if (NOT ( X86_ADAPT OR LIBMSR ) )
+    message(FATAL_ERROR "Neither x86_adapt nor libmsr chosen. Please specify -DX86_ADAPT or -DLIBMSR")
 endif()
 
-set (CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/common;${CMAKE_MODULE_PATH}")
+if ( X86_ADAPT AND LIBMSR )
+    message(FATAL_ERROR "x86_adapt and libmsr chosen. Don't know which one to use. Please specify -DX86_ADAPT or -DLIBMSR")
+endif()
+
+
+set(X86_ENERGY_SRC
+    src/x86_energy.c
+    src/rapl.c
+    src/amd_fam15h_power.c)
+    
+set(X86_ENERGY_INC
+    include/x86_energy.h)
+
+    
+add_library(x86_energy SHARED ${X86_ENERGY_SRC})
+target_include_directories(x86_energy PUBLIC include)
+set_target_properties(x86_energy
+    PROPERTIES
+        PUBLIC_HEADER ${X86_ENERGY_INC}
+)
+target_include_directories(x86_energy PUBLIC include)
+
+add_library(x86_energy-static STATIC ${X86_ENERGY_SRC})
+set_target_properties(x86_energy-static
+    PROPERTIES
+        OUTPUT_NAME x86_energy
+        PUBLIC_HEADER ${X86_ENERGY_INC}
+)
+target_include_directories(x86_energy-static PUBLIC include)
+
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
+target_link_libraries(x86_energy Threads::Threads)
+target_link_libraries(x86_energy-static Threads::Threads)
+
+# Find x86_adapt
+add_library(x86_adapt-static INTERFACE IMPORTED GLOBAL)
+add_library(x86_adapt INTERFACE IMPORTED GLOBAL)
+find_library(X86_ADAPT_LIB_STATIC x86_adapt_static
+    HINTS ENV
+        LD_LIBRARY_PATH)
+find_library(X86_ADAPT_LIB x86_adapt
+    HINTS ENV
+        LD_LIBRARY_PATH)
+find_path(X86_ADAPT_INC x86_adapt.h
+    HINTS  
+        ENV CPATH
+        ENV C_INCLUDE_PATH)
+target_link_libraries(x86_adapt-static
+    INTERFACE
+        ${X86_ADAPT_LIB_STATIC}
+    )
+set_property(TARGET x86_adapt-static PROPERTY 
+    INTERFACE_INCLUDE_DIRECTORIES
+        ${X86_ADAPT_INC}
+    )                
+target_link_libraries(x86_adapt
+    INTERFACE
+        ${X86_ADAPT_LIB}
+    )
+set_property(TARGET x86_adapt PROPERTY 
+    INTERFACE_INCLUDE_DIRECTORIES
+        ${X86_ADAPT_INC}
+    )                
+
+# Find libmsr
+add_library(libmsr-static INTERFACE IMPORTED GLOBAL)
+add_library(libmsr INTERFACE IMPORTED GLOBAL)
+find_library(LIBMSR_LIB_STATIC msr_static
+    HINTS ENV
+        LD_LIBRARY_PATH)
+find_library(LIBMSR_LIB msr
+    HINTS ENV
+        LD_LIBRARY_PATH)
+find_path(LIBMSR_INC msr.h
+    HINTS  
+        ENV CPATH
+        ENV C_INCLUDE_PATH)
+target_link_libraries(libmsr-static
+    INTERFACE
+        ${LIBMSR_LIB_STATIC}
+    )
+set_property(TARGET libmsr-static PROPERTY 
+    INTERFACE_INCLUDE_DIRECTORIES
+        ${LIBMSR_INC}
+    )                
+target_link_libraries(libmsr
+    INTERFACE
+        ${LIBMSR_LIB_STATIC}
+    )
+set_property(TARGET libmsr PROPERTY 
+    INTERFACE_INCLUDE_DIRECTORIES
+        ${LIBMSR_INC}
+    )                
 
 if(X86_ADAPT)
-    if(X86A_STATIC)
-        set(LIBX86A_NAME libx86_adapt_static.a)
-    else()
-        set(LIBX86A_NAME libx86_adapt.so)
-    endif()
-    include(FindX86Adapt)
-    if(X86_ADAPT_FOUND)
-        include_directories(${X86_ADAPT_INC_DIR})
-        link_directories(${X86_ADAPT_LIB_DIR})
-        add_definitions("-DX86_ADAPT")
-        set(LINK_LIBS ${LINK_LIBS} ${LIBX86A_NAME})
-    else()
-        message("libx86_adapt was not found, falling back to libmsr!")
-    endif()
+    target_link_libraries(x86_energy x86_adapt)
+    target_link_libraries(x86_energy-static x86_adapt-static)
+    target_compile_options(x86_energy PRIVATE "-DX86_ADAPT")
+    target_compile_options(x86_energy-static PRIVATE "-DX86_ADAPT")
 endif()
 
-
-if(NOT X86_ADAPT_FOUND OR NOT X86_ADAPT)
-    if(MSR_STATIC)
-        set(LIBMSR_NAME libmsr_static.a)
-    else()
-        set(LIBMSR_NAME libmsr.so)
-    endif()
-    include(FindMSR)
-    if(MSR_FOUND)
-        include_directories(${MSR_INC_DIR})
-        link_directories(${MSR_LIB_DIR})
-        message(STATUS "Using ${MSR_LIB_DIR}")
-    else()
-        message("Found neither libx86_adapt nor libmsr! Building libmsr.")
-        set(MSR_SOURCE msr.c)
-        if(MSR_STATIC)
-            add_library(msr_static STATIC ${MSR_SOURCE})
-        else()
-            add_library(msr SHARED ${MSR_SOURCE})
-        endif()
-        link_directories(${CMAKE_CURRENT_BINARY_DIR})
-    endif()
-    set(LINK_LIBS ${LINK_LIBS} ${LIBMSR_NAME})
+if(LIBMSR)
+    target_link_libraries(x86_energy libmsr)
+    target_link_libraries(x86_energy-static libmsr-static)
 endif()
 
+target_compile_features(x86_energy PUBLIC c_std_11)
+target_compile_features(x86_energy-static PUBLIC c_std_11)
+target_compile_options(x86_energy PRIVATE $<$<CONFIG:Debug>:-O0 -Wstrict-prototypes -Wall -Wundef -Wno-long-long -Wsign-compare -Wcomment -pedantic -finline-functions -fno-strict-aliasing>)
+target_compile_options(x86_energy-static PRIVATE $<$<CONFIG:Debug>:-O0 -Wstrict-prototypes -Wall -Wundef -Wno-long-long -Wsign-compare -Wcomment -pedantic -finline-functions -fno-strict-aliasing>)
 
-#additional c flags
-set(CMAKE_C_FLAGS "-fPIC -std=gnu11")
-#debugging c flags
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0 -Wstrict-prototypes -Wall -Wundef -Wno-long-long -Wsign-compare -Wcomment -pedantic -finline-functions -fno-strict-aliasing")
-#release c flags
-set(CMAKE_C_FLAGS_RELEASE "-O2")
-
-#build shared library
-add_library(${PROJECT_NAME}_dummy STATIC ${PLUGIN_SOURCE})
-add_library(${PROJECT_NAME} SHARED ${PLUGIN_SOURCE})
-target_link_libraries(${PROJECT_NAME} ${LINK_LIBS})
-
-# now some magic to merge static libraries adapted from libadapt
-set(TARGET ${CMAKE_BINARY_DIR}/lib${PROJECT_NAME}_static.a)
-if(X86_ADAPT)
-    set(USED_SOURCE ${X86_ADAPT_LIB_DIR}/libx86_adapt_static.a)
-else()
-    if(MSR_FOUND)
-        # libmsr is already installed on this system so we want to find it
-        # we hope that also the static library was built and installled
-        find_path(MSR_LIB_STATIC_DIR libmsr_static.a HINTS ${MSR_LIB} ${MSR_DIR}/lib ENV LD_LIBRARY_PATH DOC "Path to static libmsr")
-    else()
-        # Build static library if necessary
-        if(NOT MSR_STATIC)
-            add_library(msr_static STATIC ${MSR_SOURCE})
-        endif()
-        set(MSR_LIB_STATIC_DIR ${CMAKE_CURRENT_BINARY_DIR})
-    endif()
-
-    set(USED_SOURCE ${MSR_LIB_STATIC_DIR}/libmsr_static.a)
-endif()
-set(STATIC_LIBS ${CMAKE_BINARY_DIR}/lib${PROJECT_NAME}_dummy.a ${USED_SOURCE})
-
-add_custom_target(${PROJECT_NAME}_static ALL
-    COMMAND ./merge_static_libs.sh ${TARGET} ${STATIC_LIBS}
-    DEPENDS ${PROJECT_NAME}_dummy
-    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
-
-install(TARGETS ${PROJECT_NAME} DESTINATION lib)
-install(FILES ${TARGET} DESTINATION lib)
-install(FILES ${PLUGIN_HEADER} DESTINATION include)
+install(TARGETS x86_energy 
+    LIBRARY DESTINATION lib
+    PUBLIC_HEADER DESTINATION include)
+install(TARGETS x86_energy-static
+    ARCHIVE DESTINATION lib
+    PUBLIC_HEADER DESTINATION include)
