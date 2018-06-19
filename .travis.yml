@@ -11,4 +11,4 @@ script:
 - make install
 - cd ..
 - cmake .. -DX86_ADAPT=ON -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH=~/tmp
-- cmake --build
+- cmake --build .
