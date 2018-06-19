@@ -2,4 +2,12 @@ language: c
 sudo: required
 dist: trusty
 script:
-- mkdir build && cd build && cmake -DLIBMSR=ON -DCMAKE_BUILD_TYPE=Debug .. && cmake --build .
+- mkdir build
+- cd build
+- git clone https://github.com/tud-zih-energy/x86_adapt.git
+- cd x86_adapt
+- cmake . -DCMAKE_INSTALL_PREFIX=~/tmp
+- make install
+- cd ..
+- cmake .. -DX86_ADAPT=ON -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH=~/tmp
+- cmake --build
