@@ -4,6 +4,15 @@ project(x86_energy)
 option(X86_ADAPT "Enables x86_adapt support" OFF)
 option(LIBMSR "Enables lib msr support" OFF)
 
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    message(STATUS "Setting build type to 'Debug' as none was specified.")
+    set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
+
+    # Set the possible values of build type for cmake-gui
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release"
+        "MinSizeRel" "RelWithDebInfo")
+endif()
+
 if (NOT ( X86_ADAPT OR LIBMSR ) )
     message(FATAL_ERROR "Neither x86_adapt nor libmsr chosen. Please specify -DX86_ADAPT or -DLIBMSR")
 endif()
