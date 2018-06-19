@@ -2,7 +2,7 @@ language: c
 sudo: required
 dist: trusty
 script:
-- sudo apt install linux-headers-amd64
+- sudo apt install sudo apt-get install linux-headers-$(uname -r)
 - mkdir build
 - cd build
 - git clone https://github.com/tud-zih-energy/x86_adapt.git
