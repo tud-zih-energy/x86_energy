@@ -4,6 +4,11 @@ project(x86_energy)
 option(X86_ADAPT "Enables x86_adapt support" OFF)
 option(LIBMSR "Enables lib msr support" OFF)
 
+if(NOT X86_ENERGY_POSITION_INDEPENDENT_CODE)
+    set(X86_ENERGY_POSITION_INDEPENDENT_CODE OFF)
+endif()
+option(X86_ENERGY_POSITION_INDEPENDENT_CODE "Whether to build x86_energy libraries with position independent code" ${X86_ENERGY_POSITION_INDEPENDENT_CODE})
+
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     message(STATUS "Setting build type to 'Debug' as none was specified.")
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
@@ -30,12 +35,13 @@ set(X86_ENERGY_SRC
 set(X86_ENERGY_INC
     include/x86_energy.h)
 
-    
+
 add_library(x86_energy SHARED ${X86_ENERGY_SRC})
 target_include_directories(x86_energy PUBLIC include)
 set_target_properties(x86_energy
     PROPERTIES
         PUBLIC_HEADER ${X86_ENERGY_INC}
+        POSITION_INDEPENDENT_CODE ${X86_ENERGY_POSITION_INDEPENDENT_CODE}
 )
 target_include_directories(x86_energy PUBLIC include)
 
@@ -44,6 +50,7 @@ set_target_properties(x86_energy-static
     PROPERTIES
         OUTPUT_NAME x86_energy
         PUBLIC_HEADER ${X86_ENERGY_INC}
+        POSITION_INDEPENDENT_CODE ${X86_ENERGY_POSITION_INDEPENDENT_CODE}
 )
 target_include_directories(x86_energy-static PUBLIC include)
 
