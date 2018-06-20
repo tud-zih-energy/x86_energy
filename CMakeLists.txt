@@ -137,6 +137,9 @@ target_compile_features(x86_energy-static PUBLIC c_std_11)
 target_compile_options(x86_energy PRIVATE $<$<CONFIG:Debug>:-O0 -Wstrict-prototypes -Wall -Wundef -Wno-long-long -Wsign-compare -Wcomment -pedantic -finline-functions -fno-strict-aliasing>)
 target_compile_options(x86_energy-static PRIVATE $<$<CONFIG:Debug>:-O0 -Wstrict-prototypes -Wall -Wundef -Wno-long-long -Wsign-compare -Wcomment -pedantic -finline-functions -fno-strict-aliasing>)
 
+add_library(x86_energy::x86_energy ALIAS x86_energy)
+add_library(x86_energy::x86_energy-static ALIAS x86_energy-static)
+
 install(TARGETS x86_energy 
     LIBRARY DESTINATION lib
     PUBLIC_HEADER DESTINATION include)
