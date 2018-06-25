@@ -1,3 +1,9 @@
+/*
+ * sysfs.c
+ *
+ *  Created on: 21.06.2018
+ *      Author: rschoene
+ */
 
 #include <stddef.h>
 #include <unistd.h>
@@ -115,6 +121,9 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
             free(namelist[n]);
         free(namelist);
     }
+    else
+        return NULL;
+
     if (final_fp == NULL )
         return NULL;
     if (final_max == -1)
@@ -147,7 +156,7 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     def->package=given_package;
     def->last_reading=last_reading;
     def->overflow=0;
-    if (overflow_thread_create(&sysfs_ov,cpu,&def->thread,&def->mutex,do_read,def))
+    if (x86_energy_overflow_thread_create(&sysfs_ov,cpu,&def->thread,&def->mutex,do_read,def, 30000000))
     {
         fclose(final_fp);
         free(def);
@@ -185,7 +194,7 @@ static double do_read( x86_energy_single_counter_t  counter)
 static void do_close( x86_energy_single_counter_t counter )
 {
     struct reader_def * def = (struct reader_def *) counter;
-    overflow_thread_remove_call(&sysfs_ov,def->cpu,do_read,counter);
+    x86_energy_overflow_thread_remove_call(&sysfs_ov,def->cpu,do_read,counter);
     fclose(def->fp);
     free(def);
 }
@@ -193,7 +202,7 @@ static void do_close( x86_energy_single_counter_t counter )
 
 static void fini(  )
 {
-    overflow_thread_killall(&sysfs_ov);
+    x86_energy_overflow_thread_killall(&sysfs_ov);
 }
 
 x86_energy_access_source_t sysfs_source =

@@ -8,8 +8,6 @@
 #ifndef SRC_INCLUDE_ARCHITECTURE_H_
 #define SRC_INCLUDE_ARCHITECTURE_H_
 
-#include "../../include/x86_energy_source.h"
-
 /**
  * Get a specific CPU from a given package for package wide counters
  */

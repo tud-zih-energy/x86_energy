@@ -8,7 +8,7 @@
 #ifndef SRC_INCLUDE_ACCESS_H_
 #define SRC_INCLUDE_ACCESS_H_
 
-#include "../../include/x86_energy_source.h"
+#include "../../include/x86_energy.h"
 
 extern x86_energy_access_source_t likwid_source;
 extern x86_energy_access_source_t msr_source;

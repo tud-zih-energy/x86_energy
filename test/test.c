@@ -1,8 +1,7 @@
 #include <stdio.h>
 
 
-#include "../include/x86_energy_arch.h"
-#include "../include/x86_energy_source.h"
+#include "../include/x86_energy.h"
 
 void main()
 {
@@ -23,25 +22,28 @@ void main()
           if (a->source_granularities[j] >= X86_ENERGY_GRANULARITY_SIZE)
               continue;
           printf("Try counter %d\n",j);
-          printf("avail for granularity %d. There are %d devices avail for this counter, testing 0\n",a->source_granularities[j],x86_energy_arch_count(hw_root,a->source_granularities[j]));
-         x86_energy_single_counter_t t = a->avail_sources[i].setup(j,0);
-          if (t == NULL)
+          for (int package=0;package<x86_energy_arch_count(hw_root,a->source_granularities[j]);package++)
           {
-              printf("Could not add counter %d for package\n",j);
-              continue;
+              printf("avail for granularity %d. There are %d devices avail for this counter, testing %d\n",a->source_granularities[j],x86_energy_arch_count(hw_root,a->source_granularities[j]),package);
+              x86_energy_single_counter_t t = a->avail_sources[i].setup(j,package);
+              if (t == NULL)
+              {
+                  printf("Could not add counter %d for package\n",j);
+                  continue;
+              }
+              double value = a->avail_sources[i].read(t);
+              printf("Read value %e\n",value);
+              sleep(1);
+              double value2 = a->avail_sources[i].read(t);
+              printf("Read value %e\n",value2-value);
+              sleep(1);
+              value = a->avail_sources[i].read(t);
+              printf("Read value %e\n",value-value2);
+              sleep(1);
+              value2 = a->avail_sources[i].read(t);
+              printf("Read value %e\n",value2-value);
+              a->avail_sources[i].close(t);
           }
-          double value = a->avail_sources[i].read(t);
-          printf("Read value %e\n",value);
-          sleep(1);
-          double value2 = a->avail_sources[i].read(t);
-          printf("Read value %e\n",value2-value);
-          sleep(1);
-          value = a->avail_sources[i].read(t);
-          printf("Read value %e\n",value-value2);
-          sleep(8);
-          value2 = a->avail_sources[i].read(t);
-          printf("Read value %e\n",value2-value);
-          a->avail_sources[i].close(t);
       }
       a->avail_sources[i].fini();
   }

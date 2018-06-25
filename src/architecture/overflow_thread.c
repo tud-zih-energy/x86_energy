@@ -22,7 +22,7 @@ static struct thread_info * get_thread_info(struct ov_struct * ov,int cpu)
             return ov->thread_infos[i];
     return NULL;
 }
-static struct thread_info * add_thread_info(struct ov_struct * ov,int cpu)
+static struct thread_info * add_thread_info(struct ov_struct * ov,int cpu, long long usleep_time)
 {
     struct thread_info ** new_infos=realloc(ov->thread_infos,sizeof(struct thread_info *)*(ov->nr_thread_infos+1));
     if (new_infos==NULL)
@@ -35,6 +35,7 @@ static struct thread_info * add_thread_info(struct ov_struct * ov,int cpu)
     memset(info,0,sizeof(struct thread_info));
     pthread_mutex_init(&info->mutex,NULL);
     ov->thread_infos[ov->nr_thread_infos-1]=info;
+    info->usleep_time=usleep_time;
     return info;
 }
 
@@ -70,7 +71,7 @@ static void* on_overflow(void * arg)
     struct thread_info * info = (struct thread_info *) arg;
     while (1)
     {
-        sleep(5);
+        usleep(info->usleep_time);
         for (int i=0;i<info->nr_functions;i++)
             info->functions[i](info->t[i]);
     }
@@ -78,14 +79,21 @@ static void* on_overflow(void * arg)
     return NULL;
 }
 
-int overflow_thread_create(struct ov_struct * ov, int cpu, pthread_t *thread, pthread_mutex_t *mutex,
+int x86_energy_overflow_thread_create(struct ov_struct * ov, int cpu, pthread_t *thread, pthread_mutex_t *mutex,
         double ( *read )( x86_energy_single_counter_t ),
-        x86_energy_single_counter_t t)
+        x86_energy_single_counter_t t, long long usleep_time)
 {
     struct thread_info * info = get_thread_info(ov,cpu);
     if (info == NULL)
-        if (add_thread_info(ov,cpu) == NULL)
+    {
+        if (add_thread_info(ov,cpu,usleep_time) == NULL)
             return 1;
+    }
+    else
+    {
+        if ( info->usleep_time > usleep_time )
+            info->usleep_time = usleep_time;
+    }
     info = get_thread_info(ov,cpu);
     add_call(info, read,t);
     if (info->thread == 0 )
@@ -98,7 +106,7 @@ int overflow_thread_create(struct ov_struct * ov, int cpu, pthread_t *thread, pt
     return 0;
 }
 
-void overflow_thread_remove_call(struct ov_struct * ov, int cpu, double ( *read )( x86_energy_single_counter_t ),
+void x86_energy_overflow_thread_remove_call(struct ov_struct * ov, int cpu, double ( *read )( x86_energy_single_counter_t ),
         x86_energy_single_counter_t t)
 {
     struct thread_info * info = get_thread_info(ov,cpu);
@@ -122,7 +130,7 @@ void overflow_thread_remove_call(struct ov_struct * ov, int cpu, double ( *read 
 
 }
 
-int overflow_thread_killall(struct ov_struct * ov)
+int x86_energy_overflow_thread_killall(struct ov_struct * ov)
 {
     if ( ov->thread_infos == NULL ) return 0;
     int ret=0;
@@ -131,7 +139,7 @@ int overflow_thread_killall(struct ov_struct * ov)
     return ret;
 }
 
-void overflow_freeall(struct ov_struct * ov)
+void x86_energy_overflow_freeall(struct ov_struct * ov)
 {
     if ( ov->thread_infos == NULL ) return;
     for (int i=0;i<ov->nr_thread_infos;i++)

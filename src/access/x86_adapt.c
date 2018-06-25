@@ -5,20 +5,16 @@
  *      Author: rschoene
  */
 
-#include <stddef.h>
 #include <unistd.h>
 #include <string.h>
-#include <stdio.h>
-#include <dirent.h>
-#include  <fcntl.h>
 #include <stdlib.h>
-#include <errno.h>
 #include <math.h>
 
 #include <x86_adapt.h>
 
+#include "../../include/x86_energy.h"
+#include "../include/cpuid.h"
 #include "../include/access.h"
-#include "../include/possible_counters.h"
 #include "../include/architecture.h"
 #include "../include/overflow_thread.h"
 
@@ -150,7 +146,7 @@ static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, 
     def->unit=modifier_dbl;
     def->device=fd;
     def->pkg=index;
-    if (overflow_thread_create(&x86a_ov,cpu,&def->thread,&def->mutex,do_read,def))
+    if (x86_energy_overflow_thread_create(&x86a_ov,cpu,&def->thread,&def->mutex,do_read,def, 30000000))
     {
         free(def);
         x86_adapt_put_device(X86_ADAPT_DIE, index);
@@ -179,14 +175,14 @@ static double do_read( x86_energy_single_counter_t  counter)
 static void do_close( x86_energy_single_counter_t counter )
 {
     struct reader_def * def = (struct reader_def *) counter;
-    overflow_thread_remove_call(&x86a_ov,def->cpu,do_read,counter);
+    x86_energy_overflow_thread_remove_call(&x86a_ov,def->cpu,do_read,counter);
     x86_adapt_put_device(X86_ADAPT_DIE,def->pkg);
     free(def);
 }
 static void fini( void )
 {
-    overflow_thread_killall(&x86a_ov);
-    overflow_freeall(&x86a_ov);
+    x86_energy_overflow_thread_killall(&x86a_ov);
+    x86_energy_overflow_freeall(&x86a_ov);
 }
 
 x86_energy_access_source_t x86a_source =

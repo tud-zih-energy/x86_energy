@@ -10,8 +10,7 @@
 
 #include <pthread.h>
 
-#include "../../include/x86_energy_source.h"
-#include "../../include/x86_energy_source.h"
+#include "../../include/x86_energy.h"
 
 typedef double ( *read_function_t )( x86_energy_single_counter_t );
 
@@ -20,6 +19,7 @@ struct thread_info
     int cpu;
     pthread_t thread;
     pthread_mutex_t mutex;
+    long long usleep_time;
     size_t nr_functions;
     read_function_t * functions;
     x86_energy_single_counter_t * t;
@@ -38,14 +38,14 @@ struct ov_struct
  * Returns 1 on fail
  * sets thread and mutex
  */
-int overflow_thread_create(struct ov_struct *, int cpu, pthread_t *thread, pthread_mutex_t *mutex,
+int x86_energy_overflow_thread_create(struct ov_struct *, int cpu, pthread_t *thread, pthread_mutex_t *mutex,
         double ( *read )( x86_energy_single_counter_t t ),
+        x86_energy_single_counter_t t, long long sleep_time );
+
+void x86_energy_overflow_thread_remove_call(struct ov_struct * ov, int cpu, double ( *read )( x86_energy_single_counter_t ),
         x86_energy_single_counter_t t);
 
-void overflow_thread_remove_call(struct ov_struct * ov, int cpu, double ( *read )( x86_energy_single_counter_t ),
-        x86_energy_single_counter_t t);
-
-int overflow_thread_killall( struct ov_struct * );
-void overflow_freeall(struct ov_struct * ov);
+int x86_energy_overflow_thread_killall( struct ov_struct * );
+void x86_energy_overflow_freeall(struct ov_struct * ov);
 
 #endif /* SRC_INCLUDE_OVERFLOW_THREAD_H_ */

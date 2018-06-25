@@ -10,9 +10,10 @@
 #include <stdlib.h>
 
 #include "../include/architecture.h"
+
+#include "../../include/x86_energy.h"
 #include "../include/access.h"
 #include "../include/cpuid.h"
-#include "../../include/x86_energy_arch.h"
 
 
 static x86_energy_architecture_node_t * arch;
@@ -30,7 +31,9 @@ x86_energy_mechanisms_t * x86_energy_get_avail_mechanism(void)
         return NULL;
 
     bool is_intel=false,is_amd=false;
-    bool supported[X86_ENERGY_COUNTER_SIZE]={false,};
+    bool supported[X86_ENERGY_COUNTER_SIZE];
+    for ( int i = 0 ; i < X86_ENERGY_COUNTER_SIZE ; i++ )
+        supported[ i ] = false;
 
     char buffer[13];
     unsigned int eax = 0, ebx=0, ecx=0, edx=0;
@@ -160,7 +163,7 @@ x86_energy_mechanisms_t * x86_energy_get_avail_mechanism(void)
     {
         eax=1;
         cpuid(&eax,&ebx,&ecx,&edx);
-        if ( FAMILY(eax) == 0x15 )
+        if ( FAMILY(eax) == 15 )
         {
             is_amd=true;
             supported[X86_ENERGY_COUNTER_PCKG]=true;
@@ -194,11 +197,16 @@ x86_energy_mechanisms_t * x86_energy_get_avail_mechanism(void)
     {
         x86_energy_mechanisms_t * t = malloc(sizeof(x86_energy_mechanisms_t));
         t->name="AMD APM";
-        t->nr_avail_sources=3;
-        t->avail_sources= malloc(3*sizeof(x86_energy_access_source_t));
-        t->avail_sources[0]=msr_fam15_source;
-        t->avail_sources[1]=sysfs_fam15_source;
-        t->avail_sources[2]=procfs_fam15_source;
+        for (int i=0;i<X86_ENERGY_COUNTER_SIZE;i++)
+            if (supported[i])
+                t->source_granularities[i]=X86_ENERGY_GRANULARITY_SOCKET;
+            else
+                t->source_granularities[i]=X86_ENERGY_GRANULARITY_SIZE;
+
+        t->nr_avail_sources=1;
+        t->avail_sources= malloc(1*sizeof(x86_energy_access_source_t));
+        t->avail_sources[0]=sysfs_fam15_source;
+        t->avail_sources[1]=procfs_fam15_source;
         return t;
     }
 

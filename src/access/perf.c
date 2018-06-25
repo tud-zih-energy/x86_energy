@@ -21,7 +21,6 @@
 #include <linux/perf_event.h>
 
 #include "../include/access.h"
-#include "../include/possible_counters.h"
 #include "../include/architecture.h"
 
 

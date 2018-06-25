@@ -14,7 +14,9 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#include "../../include/x86_energy_arch.h"
+#include <inttypes.h>
+
+#include "../../include/x86_energy.h"
 
 static int read_file_long(char * file, long int* result)
 {
@@ -52,7 +54,7 @@ static int read_file_long_mask(char * file, long int** result,int* length)
     *result = NULL;
     *length=0;
     long int nr_processed=0;
-    for (int position_in_text = end_of_text-1;position_in_text>=0;position_in_text--)
+    for (int position_in_text = end_of_text;position_in_text>=0;position_in_text--)
     {
         /* end string early */
         buffer[position_in_text + 1 ] = '\0';
@@ -292,7 +294,7 @@ static int process_node(const char* sysfs_path,x86_energy_architecture_node_t * 
     long int * cpus;
     int nr_cpus;
     char filename[2048];
-    sprintf(filename, "%s/devices/system/node/node%ld/cpumap", sysfs_path,node->id);
+    sprintf(filename, "%s/devices/system/node/node%" PRId32 "/cpumap", sysfs_path,node->id);
     if (read_file_long_mask(filename, &cpus, &nr_cpus))
     {
         return 1;
@@ -306,7 +308,7 @@ static int process_node(const char* sysfs_path,x86_energy_architecture_node_t * 
         long int package_id;
         sprintf(filename,
                 "%s/devices/system/cpu/cpu%d/topology/physical_package_id",
-                sysfs_path, current_cpu);
+                sysfs_path, cpu);
         if (read_file_long(filename, &package_id))
         {
             free(cpus);
@@ -333,7 +335,7 @@ static int process_node(const char* sysfs_path,x86_energy_architecture_node_t * 
         long int *shared_cpus_l2;
         sprintf(filename,
                 "%s/devices/system/cpu/cpu%d/cache/index2/shared_cpu_map",
-                sysfs_path, current_cpu);
+                sysfs_path, cpu);
         if (read_file_long_mask(filename, &shared_cpus_l2, &nr_shared_cpus_l2))
         {
             free(cpus);
@@ -343,8 +345,8 @@ static int process_node(const char* sysfs_path,x86_energy_architecture_node_t * 
         int nr_shared_cpus_l1;
         long int *shared_cpus_l1;
         sprintf(filename,
-                "%s/devices/system/cpu/cpu%d/cache/index0/shared_cpu_map",
-                sysfs_path, current_cpu);
+                "%s/devices/system/cpu/cpu%d/cache/index1/shared_cpu_map",
+                sysfs_path, cpu);
         if (read_file_long_mask(filename, &shared_cpus_l1, &nr_shared_cpus_l1))
         {
             free(cpus);
@@ -382,25 +384,25 @@ void x86_energy_print(x86_energy_architecture_node_t * node,int level)
     switch (node->granularity)
     {
     case X86_ENERGY_GRANULARITY_THREAD:
-        printf("CPU id: %ld %s\n",node->id, node->name);
+        printf("CPU id: %" PRId32 " %s\n",node->id, node->name);
         return;
     case X86_ENERGY_GRANULARITY_CORE:
-        printf("Core: %ld %s\n",node->id,node->name);
+        printf("Core: %" PRId32 " %s\n",node->id,node->name);
         break;
     case X86_ENERGY_GRANULARITY_MODULE:
-        printf("Module: %ld %s\n",node->id,node->name);
+        printf("Module: %" PRId32 " %s\n",node->id,node->name);
         break;
     case X86_ENERGY_GRANULARITY_DIE:
-        printf("Die: %ld %s\n",node->id,node->name);
+        printf("Die: %" PRId32 " %s\n",node->id,node->name);
         break;
     case X86_ENERGY_GRANULARITY_SOCKET:
-        printf("Socket: %ld %s\n",node->id,node->name);
+        printf("Socket: %" PRId32 " %s\n",node->id,node->name);
         break;
     case X86_ENERGY_GRANULARITY_SYSTEM:
-        printf("System: %ld %s\n",node->id,node->name);
+        printf("System: %" PRId32 " %s\n",node->id,node->name);
         break;
     default:
-        printf("Unknown(%d): %ld %s\n",node->granularity,node->id,node->name);
+        printf("Unknown(%d): %" PRId32 " %s\n",node->granularity,node->id,node->name);
         break;
     }
 
@@ -459,7 +461,7 @@ void x86_energy_free_architecture_nodes( x86_energy_architecture_node_t * root )
     free(root);
 }
 
-x86_energy_architecture_node_t * x86_energy_find_arch_for_cpu(x86_energy_architecture_node_t * root, int granularity, int cpu)
+x86_energy_architecture_node_t * x86_energy_find_arch_for_cpu(x86_energy_architecture_node_t * root, enum x86_energy_granularity granularity, int cpu)
 {
     if (root->granularity==X86_ENERGY_GRANULARITY_THREAD)
     {

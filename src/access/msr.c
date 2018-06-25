@@ -18,7 +18,6 @@
 #include <pthread.h>
 
 #include "../include/access.h"
-#include "../include/possible_counters.h"
 #include "../include/cpuid.h"
 #include "../include/architecture.h"
 #include "../include/overflow_thread.h"
@@ -268,7 +267,7 @@ static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, 
     def->cpuId=cpu;
     def->last_reading=reading;
     def->unit=unit;
-    if (overflow_thread_create(&msr_ov,cpu,&def->thread,&def->mutex,do_read,def))
+    if (x86_energy_overflow_thread_create(&msr_ov,cpu,&def->thread,&def->mutex,do_read,def, 30000000))
     {
         close(fds[index]);
         fds[index]=0;
@@ -299,15 +298,15 @@ static double do_read( x86_energy_single_counter_t  counter)
 static void do_close( x86_energy_single_counter_t counter )
 {
     struct reader_def * def = (struct reader_def *) counter;
-    overflow_thread_remove_call(&msr_ov,def->cpuId,do_read,counter);
+    x86_energy_overflow_thread_remove_call(&msr_ov,def->cpuId,do_read,counter);
     close(fds[def->cpuId]);
     fds[def->cpuId]=0;
     free(def);
 }
 static void fini( void )
 {
-    overflow_thread_killall(&msr_ov);
-    overflow_freeall(&msr_ov);
+    x86_energy_overflow_thread_killall(&msr_ov);
+    x86_energy_overflow_freeall(&msr_ov);
 }
 
 x86_energy_access_source_t msr_source =
