@@ -12,6 +12,8 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
+set(THREADS_PREFER_PTHREAD_FLAG TRUE)
+find_package(Threads REQUIRED)
 
 add_library(x86_energy SHARED
     src/architecture/architecture.c
@@ -24,6 +26,8 @@ add_library(x86_energy SHARED
     src/access/sysfs_fam15.c
     src/access/sysfs.c
 )
+
+target_link_libraries(x86_energy PUBLIC Threads::Threads m)
 
 find_package(X86Adapt)
 
@@ -48,6 +52,8 @@ set_target_properties(x86_energy PROPERTIES PUBLIC_HEADER "include/x86_energy.h"
 target_compile_features(x86_energy PUBLIC c_std_99)
 
 add_library(x86_energy::x86_energy ALIAS x86_energy)
+
+add_subdirectory(test)
 
 install(TARGETS x86_energy
     EXPORT x86_energyTargets
