@@ -318,7 +318,7 @@ public:
 
         for (size_t i = 0; i < mechanism_->nr_avail_sources; i++)
         {
-            result.emplace_back(mechanism_->avail_sources[i]);
+            result.emplace_back(&mechanism_->avail_sources[i]);
         }
 
         return result;
