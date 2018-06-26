@@ -314,13 +314,14 @@ public:
 
     std::vector<AccessSource> available_sources() const
     {
-        if (mechanism_->nr_avail_sources == 0)
+        std::vector<AccessSource> result;
+
+        for (size_t i = 0; i < mechanism_->nr_avail_sources; i++)
         {
-            return {};
+            result.emplace_back(mechanism_->avail_sources[i]);
         }
 
-        return { mechanism_->avail_sources,
-                 mechanism_->avail_sources + mechanism_->nr_avail_sources };
+        return result;
     }
 
 private:
