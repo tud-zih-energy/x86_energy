@@ -47,8 +47,11 @@ if (LIKWID_FOUND)
     target_link_libraries(x86_energy PUBLIC ${LIKWID_LIBRARIES})
 endif()
 
-target_include_directories(x86_energy PRIVATE include)
-set_target_properties(x86_energy PROPERTIES PUBLIC_HEADER "include/x86_energy.h")
+target_include_directories(x86_energy PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
+set_target_properties(x86_energy PROPERTIES PUBLIC_HEADER "include/x86_energy.h;include/x86_energy.hpp")
 target_compile_features(x86_energy PUBLIC c_std_99)
 
 add_library(x86_energy::x86_energy ALIAS x86_energy)
