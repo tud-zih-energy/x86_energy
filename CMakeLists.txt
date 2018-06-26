@@ -16,6 +16,8 @@ endif()
 
 SET(SOURCES src/architecture/architecture.c src/architecture/overflow_thread.c src/architecture/parse_architecture.c src/access/msr_fam15.c  src/access/msr.c src/access/perf.c src/access/procfs.c src/access/sysfs_fam15.c src/access/sysfs.c)
 
+set_property(TARGET x86_energy PROPERTY C_STANDARD 99)
+
 find_package(X86Adapt)
 
 if (X86Adapt_FOUND)
