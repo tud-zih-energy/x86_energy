@@ -307,7 +307,7 @@ static int process_node(const char* sysfs_path,x86_energy_architecture_node_t * 
             continue;
         long int package_id;
         sprintf(filename,
-                "%s/devices/system/cpu/cpu%d/topology/physical_package_id",
+                "%s/devices/system/cpu/cpu%ld/topology/physical_package_id",
                 sysfs_path, cpu);
         if (read_file_long(filename, &package_id))
         {
@@ -334,7 +334,7 @@ static int process_node(const char* sysfs_path,x86_energy_architecture_node_t * 
         int nr_shared_cpus_l2;
         long int *shared_cpus_l2;
         sprintf(filename,
-                "%s/devices/system/cpu/cpu%d/cache/index2/shared_cpu_map",
+                "%s/devices/system/cpu/cpu%ld/cache/index2/shared_cpu_map",
                 sysfs_path, cpu);
         if (read_file_long_mask(filename, &shared_cpus_l2, &nr_shared_cpus_l2))
         {
@@ -345,7 +345,7 @@ static int process_node(const char* sysfs_path,x86_energy_architecture_node_t * 
         int nr_shared_cpus_l1;
         long int *shared_cpus_l1;
         sprintf(filename,
-                "%s/devices/system/cpu/cpu%d/cache/index1/shared_cpu_map",
+                "%s/devices/system/cpu/cpu%ld/cache/index1/shared_cpu_map",
                 sysfs_path, cpu);
         if (read_file_long_mask(filename, &shared_cpus_l1, &nr_shared_cpus_l1))
         {

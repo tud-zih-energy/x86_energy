@@ -184,13 +184,25 @@ x86_energy_mechanisms_t * x86_energy_get_avail_mechanism(void)
             t->source_granularities[X86_ENERGY_COUNTER_PLATFORM]=X86_ENERGY_GRANULARITY_SYSTEM;
         else
             t->source_granularities[X86_ENERGY_COUNTER_PLATFORM]=X86_ENERGY_GRANULARITY_SIZE;
-        t->nr_avail_sources=5;
-        t->avail_sources= malloc(5*sizeof(x86_energy_access_source_t));
-        t->avail_sources[0]=likwid_source;
-        t->avail_sources[1]=msr_source;
-        t->avail_sources[2]=sysfs_source;
-        t->avail_sources[3]=perf_source;
-        t->avail_sources[4]=x86a_source;
+        t->nr_avail_sources=3;
+#ifdef USELIKWID
+        t->nr_avail_sources+=1;
+#endif
+#ifdef USEX86_ADAPT
+        t->nr_avail_sources+=1;
+#endif
+        t->avail_sources= malloc(t->nr_avail_sources*sizeof(x86_energy_access_source_t));
+
+        int current=0;
+        t->avail_sources[current++]=sysfs_source;
+        t->avail_sources[current++]=perf_source;
+        t->avail_sources[current++]=msr_source;
+#ifdef USELIKWID
+        t->avail_sources[current++]=likwid_source;
+#endif
+#ifdef USEX86_ADAPT
+        t->avail_sources[current++]=x86a_source;
+#endif
         return t;
     }
     if ( is_amd )
@@ -206,7 +218,9 @@ x86_energy_mechanisms_t * x86_energy_get_avail_mechanism(void)
         t->nr_avail_sources=1;
         t->avail_sources= malloc(1*sizeof(x86_energy_access_source_t));
         t->avail_sources[0]=sysfs_fam15_source;
-        t->avail_sources[1]=procfs_fam15_source;
+#ifdef USEX86_ADAPT
+        // TODO
+#endif
         return t;
     }
 
