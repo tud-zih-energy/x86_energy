@@ -25,6 +25,7 @@ int main()
         catch (std::exception& e)
         {
             std::cerr << "Init failed: " << e.what() << std::endl;
+            continue;
         }
 
         for (int j = 0; static_cast<x86_energy::Counter>(j) < x86_energy::Counter::SIZE; j++)
