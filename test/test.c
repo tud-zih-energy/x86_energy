@@ -1,7 +1,8 @@
+#include <x86_energy.h>
+
 #include <stdio.h>
+#include <unistd.h>
 
-
-#include "../include/x86_energy.h"
 
 void main()
 {
