@@ -1,50 +1,71 @@
-cmake_minimum_required(VERSION 2.8)
-project(x86_energy)
+cmake_minimum_required(VERSION 3.9)
+cmake_policy(SET CMP0048 NEW)
+project(x86_energy VERSION 2.0)
 
-option(GIT_UPDATE_SUBMODULES "Automatically update git submodules during CMake run" ON)
-
-set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake;${CMAKE_MODULE_PATH}")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     message(STATUS "Setting build type to 'Debug' as none was specified.")
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
 
     # Set the possible values of build type for cmake-gui
-    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release")
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
 
-SET(SOURCES src/architecture/architecture.c src/architecture/overflow_thread.c src/architecture/parse_architecture.c src/access/msr_fam15.c  src/access/msr.c src/access/perf.c src/access/procfs.c src/access/sysfs_fam15.c src/access/sysfs.c)
+add_library(x86_energy SHARED
+    src/architecture/architecture.c
+    src/architecture/overflow_thread.c
+    src/architecture/parse_architecture.c
+    src/access/msr_fam15.c
+    src/access/msr.c
+    src/access/perf.c
+    src/access/procfs.c
+    src/access/sysfs_fam15.c
+    src/access/sysfs.c
+)
 
 find_package(X86Adapt)
 
 if (X86Adapt_FOUND)
-    include_directories(${X86_ADAPT_INCLUDE_DIRS})
-    LIST(APPEND SOURCES src/access/x86_adapt.c)
-    SET( CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -DUSEX86_ADAPT" )
+    target_include_directories(x86_energy PRIVATE ${X86_ADAPT_INCLUDE_DIRS})
+    target_sources(x86_energy PRIVATE src/access/x86_adapt.c)
+    target_compile_definitions(x86_energy PRIVATE USEX86_ADAPT)
+    target_link_libraries(x86_energy PUBLIC ${X86_ADAPT_LIBRARIES})
 endif()
 
 find_package(Likwid)
 
 if (LIKWID_FOUND)
-    include_directories(${LIKWID_INCLUDE_DIRS})
-    LIST(APPEND SOURCES src/access/likwid.c)
-    SET(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -DUSELIKWID" )
+    target_include_directories(x86_energy PRIVATE ${LIKWID_INCLUDE_DIRS})
+    target_sources(x86_energy PRIVATE src/access/likwid.c)
+    target_compile_definitions(x86_energy PRIVATE USELIKWID)
+    target_link_libraries(x86_energy PUBLIC ${LIKWID_LIBRARIES})
 endif()
 
-include_directories(include)
-add_library(x86_energy SHARED ${SOURCES})
+target_include_directories(x86_energy PRIVATE include)
 set_target_properties(x86_energy PROPERTIES PUBLIC_HEADER "include/x86_energy.h")
+target_compile_features(x86_energy PUBLIC c_std_99)
 
-set_target_properties(x86_energy PROPERTIES C_STANDARD 99)
+add_library(x86_energy::x86_energy ALIAS x86_energy)
 
-if (X86Adapt_FOUND)
-    target_link_libraries(x86_energy ${X86_ADAPT_LIBRARIES})
-endif()
-if (LIKWID_FOUND)
-    target_link_libraries(x86_energy ${LIKWID_LIBRARIES})
-endif()
+install(TARGETS x86_energy
+    EXPORT x86_energyTargets
+    LIBRARY DESTINATION lib
+    PUBLIC_HEADER DESTINATION include
+)
 
-install(TARGETS x86_energy LIBRARY DESTINATION lib
-        PUBLIC_HEADER DESTINATION include
+install(EXPORT x86_energyTargets
+    DESTINATION share/cmake/x86_energy
+    NAMESPACE x86_energy::
+)
+
+include(CMakePackageConfigHelpers)
+write_basic_package_version_File("x86_energyConfigVersion.cmake"
+    VERSION ${x86_energy_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+
+install(FILES "x86_energyConfig.cmake" "${CMAKE_CURRENT_BINARY_DIR}/x86_energyConfigVersion.cmake"
+    DESTINATION share/cmake/x86_energy
 )
