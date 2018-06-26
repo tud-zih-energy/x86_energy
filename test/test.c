@@ -48,4 +48,5 @@ void main()
       }
       a->avail_sources[i].fini();
   }
+  x86_energy_free_architecture_nodes(hw_root);
 }
