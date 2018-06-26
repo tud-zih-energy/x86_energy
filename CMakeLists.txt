@@ -57,8 +57,8 @@ target_compile_features(x86_energy PUBLIC c_std_99)
 add_library(x86_energy::x86_energy ALIAS x86_energy)
 
 add_library(x86_energy_cxx INTERFACE)
-target_link_libraries(x86_energy_cxx PUBLIC x86_energy::x86_energy)
-target_compile_features(x86_energy_cxx PUBLIC cxx_std_11)
+target_link_libraries(x86_energy_cxx INTERFACE x86_energy::x86_energy)
+target_compile_features(x86_energy_cxx INTERFACE cxx_std_11)
 
 add_library(x86_energy::x86_energy_cxx ALIAS x86_energy_cxx)
 
