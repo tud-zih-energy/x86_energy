@@ -60,6 +60,9 @@ inline std::ostream& operator<<(std::ostream& s, Granularity g)
     case Granularity::DEVICE:
         s << "DEVICE";
         break;
+    default:
+        s << "INVALID";
+        break;
     }
     return s;
 }
@@ -95,6 +98,9 @@ inline std::ostream& operator<<(std::ostream& s, Counter c)
         break;
     case Counter::PLATFORM:
         s << "PLATFORM";
+        break;
+    default:
+        s << "INVALID";
         break;
     }
 
@@ -219,6 +225,8 @@ public:
     {
         std::swap(source_, other.source_);
         std::swap(source_counter_, other.source_counter_);
+
+        return *this;
     }
 
 public:

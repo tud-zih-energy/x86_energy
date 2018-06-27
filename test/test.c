@@ -4,12 +4,12 @@
 #include <unistd.h>
 
 
-void main()
+int main()
 {
     x86_energy_architecture_node_t * hw_root= x86_energy_init_architecture_nodes();
     x86_energy_mechanisms_t * a = x86_energy_get_avail_mechanism();
   printf("Architecture: %s\n",a->name);
-  for (int i=0;i<a->nr_avail_sources;i++)
+  for (size_t i=0;i<a->nr_avail_sources;i++)
   {
       printf("Testing source %s\n",a->avail_sources[i].name);
       int ret=a->avail_sources[i].init();
