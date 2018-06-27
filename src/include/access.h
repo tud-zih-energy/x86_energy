@@ -16,6 +16,7 @@ extern x86_energy_access_source_t likwid_source;
 
 extern x86_energy_access_source_t msr_source;
 extern x86_energy_access_source_t msr_fam15_source;
+extern x86_energy_access_source_t msr_fam23_source;
 extern x86_energy_access_source_t perf_source;
 extern x86_energy_access_source_t procfs_source;
 extern x86_energy_access_source_t procfs_fam15_source;

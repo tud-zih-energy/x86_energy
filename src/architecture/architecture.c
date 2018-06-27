@@ -24,7 +24,6 @@ x86_energy_mechanisms_t * x86_energy_get_avail_mechanism(void)
 
     if (arch == NULL)
         return NULL;
-    x86_energy_print(arch,0);
     int num_packages = x86_energy_arch_count(arch,X86_ENERGY_GRANULARITY_SOCKET);
 
     if (num_packages <= 0)
