@@ -59,6 +59,16 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     int cpu=get_test_cpu(X86_ENERGY_GRANULARITY_SOCKET, index);
     if ( cpu < 0 )
         return NULL;
+    switch(counter_type)
+    {
+    case X86_ENERGY_COUNTER_PCKG: /* fall-through */
+    case X86_ENERGY_COUNTER_CORES: /* fall-through */
+    case X86_ENERGY_COUNTER_DRAM: /* fall-through */
+    case X86_ENERGY_COUNTER_GPU: /* fall-through */
+    case X86_ENERGY_COUNTER_PLATFORM:
+        break
+    default: return;
+    }
     if (counter_type == X86_ENERGY_COUNTER_SIZE) return NULL;
     int given_package=index;
     char * name=sysfs_names[counter_type];
