@@ -192,7 +192,7 @@ public:
     SourceCounter(x86_energy_access_source_t* source, x86_energy_single_counter_t source_counter)
     : source_(source), source_counter_(source_counter)
     {
-        if (source_ == nullptr || source_counter)
+        if (source_ == nullptr || source_counter_ == nullptr)
         {
             throw std::runtime_error("Trying to construct a source counter with invalid values.");
         }
