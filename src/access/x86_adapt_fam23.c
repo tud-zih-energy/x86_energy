@@ -20,8 +20,8 @@
 
 #define BUFFER_SIZE 4096
 #define POWER_UNIT_REGISTER "Intel_RAPL_Power_Unit"
-#define PKG_REGISTER "AMD_RAPL_Pckg_Energy"
-#define CORE_REGISTER "AMD_RAPL_Core_Energy"
+#define PKG_REGISTER "Intel_RAPL_Pckg_Energy"
+#define CORE_REGISTER "Intel_RAPL_Core_Energy"
 
 struct reader_def
 {
