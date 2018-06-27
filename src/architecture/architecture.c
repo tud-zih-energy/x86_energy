@@ -163,7 +163,7 @@ x86_energy_mechanisms_t * x86_energy_get_avail_mechanism(void)
     {
         eax=1;
         cpuid(&eax,&ebx,&ecx,&edx);
-        if ( FAMILY(eax) == 15 )
+        if ( FAMILY(eax) == 15 && EXT_FAMILY(eax) == 0 )
         {
             is_amd=true;
             supported[X86_ENERGY_COUNTER_PCKG]=true;
