@@ -77,6 +77,7 @@ enum class Counter
     DRAM = X86_ENERGY_COUNTER_DRAM,
     GPU = X86_ENERGY_COUNTER_GPU,
     PLATFORM = X86_ENERGY_COUNTER_PLATFORM,
+    SINGLE_CORE = X86_ENERGY_COUNTER_SINGLE_CORE,
     SIZE = X86_ENERGY_COUNTER_SIZE
 };
 
@@ -99,6 +100,9 @@ inline std::ostream& operator<<(std::ostream& s, Counter c)
     case Counter::PLATFORM:
         s << "PLATFORM";
         break;
+    case Counter::SINGLE_CORE:
+        s << "SINGLE_CORE";
+        break;
     default:
         s << "INVALID";
         break;
@@ -116,6 +120,15 @@ private:
 
     ArchitectureNode(x86_energy_architecture_node_t* node) : node_(node)
     {
+        initialize_children();
+    }
+
+    void initialize_children()
+    {
+        for (auto i = 0u; i < node_->nr_children; i++)
+        {
+            children_.emplace_back(ArchitectureNode(&node_->children[i]));
+        }
     }
 
 public:
@@ -134,18 +147,16 @@ public:
         return node_->name;
     }
 
-    std::vector<ArchitectureNode> children() const
+    const std::vector<ArchitectureNode>& children() const
     {
-        if (node_->nr_children == 0)
-            return {};
-
-        return { node_->children, node_->children + node_->nr_children };
+        return children_;
     }
 
     friend class Architecture;
 
 private:
     x86_energy_architecture_node_t* node_;
+    std::vector<ArchitectureNode> children_;
 };
 
 class Architecture : public ArchitectureNode
@@ -162,6 +173,7 @@ public:
     Architecture() : root_node_(x86_energy_init_architecture_nodes())
     {
         node_ = root_node_.get();
+        initialize_children();
 
         if (node_ == nullptr)
         {
@@ -250,6 +262,8 @@ private:
 class AccessSource
 {
 public:
+    AccessSource() = delete;
+
     AccessSource(x86_energy_access_source_t* source) : source_(source)
     {
         if (source_ == nullptr)
@@ -264,6 +278,23 @@ public:
         {
             source_->fini();
         }
+    }
+
+    AccessSource(const AccessSource&) = delete;
+    AccessSource& operator=(const AccessSource&) = delete;
+
+    AccessSource(AccessSource&& other) : source_(other.source_), initialized_(other.initialized_)
+    {
+        other.source_ = nullptr;
+        other.initialized_ = false;
+    }
+
+    AccessSource& operator=(AccessSource&& other)
+    {
+        std::swap(source_, other.source_);
+        std::swap(initialized_, other.initialized_);
+
+        return *this;
     }
 
 public:
