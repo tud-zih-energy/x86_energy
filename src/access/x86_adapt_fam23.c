@@ -53,6 +53,42 @@ static int init( void ){
         return 1;
     return 0;
 }
+/**
+ * TODO fix, more a wild guess here
+ */
+static double get_default_unit()
+{
+
+    static double default_unit = -1.0;
+    if ( default_unit > 0.0 )
+        return default_unit;
+
+    int xa_index_unit = x86_adapt_lookup_ci_name(X86_ADAPT_DIE, POWER_UNIT_REGISTER);
+    if (xa_index_unit < 0 )
+    {
+        return -1.0;
+    }
+
+    int fd = x86_adapt_get_device_ro(X86_ADAPT_CPU, 0);
+    if (fd <= 0)
+        return -1.0;
+
+
+    if (x86_adapt_get_setting(fd, xa_index_unit, &modifier_u64) != 8)
+    {
+        x86_adapt_put_device(X86_ADAPT_DIE, 0);
+        return -1.0;
+    }
+    x86_adapt_put_device(X86_ADAPT_DIE, 0);
+
+    modifier_u64 &= 0x1F00;
+    modifier_u64 = modifier_u64 >> 8;
+    double modifier_dbl = modifier_u64;
+    modifier_dbl = 1.0 / pow(2.0, modifier_dbl);
+    default_unit=modifier_dbl;
+    return default_unit;
+}
+
 
 static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, size_t index )
 {
@@ -61,7 +97,6 @@ static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, 
     int xa_index;
     int xa_type;
     int fd;
-    int cpu_fd=-1;
     switch (counter_type)
     {
     case X86_ENERGY_COUNTER_PCKG:
@@ -69,6 +104,7 @@ static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, 
         if ( cpu < 0 )
             return NULL;
         xa_index = x86_adapt_lookup_ci_name(X86_ADAPT_DIE, PKG_REGISTER);
+        xa_type = X86_ADAPT_DIE;
         if (xa_index < 0 )
             return NULL;
         fd = x86_adapt_get_device_ro(X86_ADAPT_DIE, index);
@@ -80,15 +116,12 @@ static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, 
         if ( cpu < 0 )
             return NULL;
         xa_index = x86_adapt_lookup_ci_name(X86_ADAPT_CPU, CORE_REGISTER);
+        xa_type = X86_ADAPT_CPU;
         if (xa_index < 0 )
             return NULL;
-        fd = x86_adapt_get_device_ro(X86_ADAPT_DIE, index);
+        fd = x86_adapt_get_device_ro(X86_ADAPT_CPU, cpu);
         if (fd <= 0)
-            return NULL;
-        cpu_fd = x86_adapt_get_device_ro(X86_ADAPT_CPU, cpu);
-        if (cpu_fd <= 0)
         {
-            x86_adapt_put_device(X86_ADAPT_DIE, index);
             return NULL;
         }
         break;
@@ -96,33 +129,16 @@ static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, 
         return NULL;
     }
 
-    int xa_index_unit = x86_adapt_lookup_ci_name(X86_ADAPT_DIE, POWER_UNIT_REGISTER);
-    if (xa_index_unit < 0 )
-    {
-        x86_adapt_put_device(X86_ADAPT_DIE, index);
-        if (cpu_fd)
-            x86_adapt_put_device(X86_ADAPT_CPU, cpu);
-        return NULL;
-    }
 
     uint64_t modifier_u64;
-    if (x86_adapt_get_setting(fd, xa_index_unit, &modifier_u64) != 8)
-    {
-        x86_adapt_put_device(X86_ADAPT_DIE, index);
-        if (cpu_fd)
-            x86_adapt_put_device(X86_ADAPT_CPU, cpu);
-        return NULL;
-    }
+    /* will happen for core */
 
-    modifier_u64 &= 0x1F00;
-    modifier_u64 = modifier_u64 >> 8;
-    double modifier_dbl = modifier_u64;
-    modifier_dbl = 1.0 / pow(2.0, modifier_dbl);
     uint64_t current_setting;
     if (x86_adapt_get_setting(fd, xa_index, &current_setting) != 8)
     {
-        x86_adapt_put_device(X86_ADAPT_DIE, index);
-        if (cpu_fd)
+        if (xa_type == X86_ADAPT_DIE)
+            x86_adapt_put_device(X86_ADAPT_DIE, index);
+        else
             x86_adapt_put_device(X86_ADAPT_CPU, cpu);
         return NULL;
     }
@@ -132,20 +148,20 @@ static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, 
     def->last_reading=current_setting;
     def->cpu=cpu;
     def->unit=modifier_dbl;
+    def->device=fd;
     switch (counter_type)
     {
     case X86_ENERGY_COUNTER_PCKG:
-        def->device=fd;
         def->is_per_core=0;
         break;
     case X86_ENERGY_COUNTER_SINGLE_CORE:
-        def->device=cpu_fd;
         def->is_per_core=1;
         break;
     default:
         free(def);
-        x86_adapt_put_device(X86_ADAPT_DIE, index);
-        if (cpu_fd)
+        if (xa_type == X86_ADAPT_DIE)
+            x86_adapt_put_device(X86_ADAPT_DIE, index);
+        else
             x86_adapt_put_device(X86_ADAPT_CPU, cpu);
         return NULL;
     }
@@ -153,8 +169,9 @@ static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, 
     if (x86_energy_overflow_thread_create(&x86a_ov,cpu,&def->thread,&def->mutex,do_read,def, 30000000))
     {
         free(def);
-        x86_adapt_put_device(X86_ADAPT_DIE, index);
-        if (cpu_fd)
+        if (xa_type == X86_ADAPT_DIE)
+            x86_adapt_put_device(X86_ADAPT_DIE, index);
+        else
             x86_adapt_put_device(X86_ADAPT_CPU, cpu);
         return NULL;
     }
