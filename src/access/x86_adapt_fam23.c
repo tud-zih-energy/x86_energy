@@ -130,7 +130,16 @@ static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, 
     }
 
 
-    uint64_t modifier_u64;
+    double unit=get_default_unit();
+    if (unit < 0.0)
+    {
+        if (xa_type == X86_ADAPT_DIE)
+            x86_adapt_put_device(X86_ADAPT_DIE, index);
+        else
+            x86_adapt_put_device(X86_ADAPT_CPU, cpu);
+        return NULL;
+    }
+
     /* will happen for core */
 
     uint64_t current_setting;
