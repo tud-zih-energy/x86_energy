@@ -24,8 +24,8 @@
 static char * x86a_names [X86_ENERGY_COUNTER_SIZE] = {
    "Intel_RAPL_Pckg_Energy",
   "Intel_RAPL_PP0_Energy",
-  "Intel_RAPL_PP1_Energy",
-  "Intel_RAPL_RAM_Energy"
+  "Intel_RAPL_RAM_Energy",
+  "Intel_RAPL_PP1_Energy"
 };
 
 
