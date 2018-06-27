@@ -1,5 +1,5 @@
 /*
- * msr.c
+ * msr_fam23.c
  *
  *  Created on: 21.06.2018
  *      Author: rschoene
@@ -24,13 +24,10 @@
 
 #define BUFFER_SIZE 4096
 
-#define MSR_RAPL_POWER_UNIT             0x606
+#define AMD_MSR_PWR_UNIT                0xC0010299
 
-#define MSR_PKG_ENERGY_STATUS           0x611
-#define MSR_PP0_ENERGY_STATUS           0x639
-#define MSR_PP1_ENERGY_STATUS           0x641
-#define MSR_DRAM_ENERGY_STATUS          0x619
-#define MSR_PLATFORM_ENERGY_STATUS      0x64D
+#define MSR_PKG_ENERGY_STATUS           0xC001029B
+#define MSR_CORE_ENERGY_STATUS          0xC001029A
 
 struct reader_def
 {
@@ -112,74 +109,14 @@ static int freq_gen_msr_get_max_entries(   )
 
 static int * fds;
 
+/**
+ * TODO fix, more a wild guess here
+ */
 static double get_default_unit(long unsigned cpu)
 {
-    static double default_unit = -1.0;
-    if ( default_unit > 0.0 )
-        return default_unit;
-    int already_opened=fds[cpu];
-    /* if not already open, open. if fail, return NULL */
-    if ( fds[cpu] <=0 )
-    {
-        char buffer [BUFFER_SIZE];
-        /* get uncore msr */
-
-        if ( snprintf(buffer,BUFFER_SIZE,"/dev/cpu/%lu/msr",cpu) == BUFFER_SIZE )
-            return -1.0;
-
-        fds[cpu] = open(buffer, O_RDONLY);
-        if ( fds[cpu] < 0 )
-        {
-            if ( snprintf(buffer,BUFFER_SIZE,"/dev/cpu/%lu/msr-safe",cpu) == BUFFER_SIZE )
-                return -1.0;
-            fds[cpu] = open(buffer, O_RDONLY);
-            if ( fds[cpu] < 0 )
-            {
-                return -1.0;
-            }
-        }
-    }
-    uint64_t modifier_u64;
-    int result=pread(fds[cpu],&modifier_u64,8,MSR_RAPL_POWER_UNIT);
-
-    /* close if was not open before*/
-    if (already_opened <=0)
-    {
-        close(fds[cpu]);
-        fds[cpu]=-1;
-    }
-    if (result != 8)
-        return -1.0;
-
-
-    modifier_u64 &= 0x1F00;
-    modifier_u64 = modifier_u64 >> 8;
-    default_unit = modifier_u64;
-    default_unit = 1.0 / pow(2.0, default_unit);
-    return default_unit;
-}
-
-static double get_dram_unit(long unsigned cpu)
-{
-    static double dram_unit=-1.0;
-    if ( dram_unit > 0.0 )
-        return dram_unit;
-    unsigned int eax = 1, ebx=0, ecx=0, edx=0;
-    cpuid(&eax,&ebx,&ecx,&edx);
-    if ( FAMILY(eax) != 6 )
-        return 0;
-    switch ((EXT_MODEL(eax) << 4 )+ MODEL(eax))
-    {
-    case 0x3f: /* Haswell-EP, fall-through */
-    case 0x4e: /* Broadwell-EP, fall-through */
-    case 0x55: /* SKL SP*/
-        dram_unit=1.0 / pow(2.0, 16.0);
-        break;
-    /* none of the above */
-    default:
-        dram_unit=get_default_unit(cpu);
-    }
-    return dram_unit;
+    return 15.3E-6;
+#define AMD_MSR_CORE_ENERGY 0xC001029A
+#define AMD_MSR_PACKAGE_ENERGY 0xC001029B
 }
 
 
@@ -196,7 +133,21 @@ static int init( void ){
 
 static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, size_t index )
 {
-    int cpu=get_test_cpu(X86_ENERGY_GRANULARITY_SOCKET, index);
+    int cpu;
+    switch (counter_type)
+    {
+    case    X86_ENERGY_COUNTER_PCKG:
+        cpu=get_test_cpu(X86_ENERGY_GRANULARITY_SOCKET, index);
+        break;
+    case    X86_ENERGY_COUNTER_DRAM:
+        cpu=get_test_cpu(X86_ENERGY_GRANULARITY_SOCKET, index);
+        break;
+/*    case    X86_ENERGY_COUNTER_SINGLE_CORE:
+        cpu=get_test_cpu(X86_ENERGY_GRANULARITY_CORE, index);
+        break;*/
+    default:
+        return NULL;
+    }
     if ( cpu < 0 )
         return NULL;
     /* if not already open, open. if fail, return NULL */
@@ -223,31 +174,7 @@ static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, 
 
     /* try to read */
     uint64_t reg;
-    double unit;
-    switch (counter_type)
-    {
-    case X86_ENERGY_COUNTER_PCKG:
-        reg = MSR_PKG_ENERGY_STATUS;
-        unit=get_default_unit(cpu);
-        break;
-    case X86_ENERGY_COUNTER_CORES:
-        reg = MSR_PP0_ENERGY_STATUS;
-        unit=get_default_unit(cpu);
-        break;
-    case X86_ENERGY_COUNTER_DRAM:
-        reg = MSR_DRAM_ENERGY_STATUS;
-        unit=get_dram_unit(cpu);
-        break;
-    case X86_ENERGY_COUNTER_GPU:
-        reg = MSR_PP1_ENERGY_STATUS;
-        unit=get_default_unit(cpu);
-        break;
-    case X86_ENERGY_COUNTER_PLATFORM:
-        reg = MSR_PLATFORM_ENERGY_STATUS;
-        unit=get_default_unit(cpu);
-        break;
-    default: return NULL;
-    }
+    double unit=get_default_unit(cpu);
     int64_t reading;
     int result=pread(fds[cpu],&reading,8,reg);
     if (result!=8)
@@ -277,6 +204,7 @@ static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, 
     return (x86_energy_single_counter_t) def;
 }
 
+
 static double do_read( x86_energy_single_counter_t  counter)
 {
     struct reader_def * def = (struct reader_def *) counter;
@@ -285,6 +213,7 @@ static double do_read( x86_energy_single_counter_t  counter)
     int result=pread(fds[def->cpuId],&reading,8,def->reg);
     if (result != 8)
         return -1.0;
+    reading = reading & 0xFFFFFFFF;
     if (reading < (def->last_reading & 0xFFFFFFFFULL) )
     {
         def->last_reading = (def->last_reading & 0xFFFFFFFF00000000ULL) + 0x100000000 + reading;
@@ -311,7 +240,7 @@ static void fini( void )
 
 x86_energy_access_source_t msr_source =
 {
-    .name="msr-rapl",
+    .name="msr-rapl-fam23",
     .init=init,
     .setup=setup,
     .read=do_read,

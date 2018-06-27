@@ -108,7 +108,7 @@ static int init( void ){
 
 static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, size_t index )
 {
-    int cpu=get_test_cpu(index);
+    int cpu=get_test_cpu(X86_ENERGY_GRANULARITY_SOCKET, index);
 
     if (counter_type == X86_ENERGY_COUNTER_SIZE)
         return NULL;

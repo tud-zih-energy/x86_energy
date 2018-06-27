@@ -163,7 +163,7 @@ x86_energy_mechanisms_t * x86_energy_get_avail_mechanism(void)
     {
         eax=1;
         cpuid(&eax,&ebx,&ecx,&edx);
-        if ( FAMILY(eax) == 15 && EXT_FAMILY(eax) == 0 )
+        if ( FAMILY(eax) + EXT_FAMILY(eax) == 15 )
         {
             is_amd=true;
             supported[X86_ENERGY_COUNTER_PCKG]=true;
@@ -218,19 +218,43 @@ x86_energy_mechanisms_t * x86_energy_get_avail_mechanism(void)
         t->nr_avail_sources=1;
         t->avail_sources= malloc(1*sizeof(x86_energy_access_source_t));
         t->avail_sources[0]=sysfs_fam15_source;
+
+        // TODO msr
 #ifdef USEX86_ADAPT
-        // TODO
+        // TODO x86a
 #endif
         return t;
     }
+    // TODO Fam 23
+
 
     return NULL;
 }
 
-long get_test_cpu(unsigned long int package)
+static x86_energy_architecture_node_t * find_node_internal( x86_energy_architecture_node_t *current, enum x86_energy_granularity given_granularity, unsigned long int id)
+{
+    if ( current->granularity == given_granularity && current->id == id )
+        return current;
+    for (int i=0;i<current->nr_children;i++)
+    {
+        x86_energy_architecture_node_t * found = find_node_internal(&(current->children[i]),given_granularity,id);
+        if (found != NULL)
+            return found;
+    }
+    return NULL;
+}
+
+long get_test_cpu(enum x86_energy_granularity given_granularity, unsigned long int id)
 {
     x86_energy_architecture_node_t * current = arch;
-    while (current->granularity != X86_ENERGY_GRANULARITY_THREAD)
-        current=current->children;
-    return current->id;
+
+    x86_energy_architecture_node_t * sub_node = find_node_internal( current, given_granularity, id);
+
+    if ( sub_node == NULL )
+        return -1;
+
+    while (sub_node->granularity != X86_ENERGY_GRANULARITY_THREAD)
+        sub_node=sub_node->children;
+    return sub_node->id;
 }
+
