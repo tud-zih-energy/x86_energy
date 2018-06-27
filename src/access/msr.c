@@ -88,7 +88,7 @@ static int freq_gen_msr_get_max_entries(   )
             {
 
                 /* check access to msr */
-                if (snprintf(buffer,BUFFER_SIZE,"/dev/cpu/%lli/msr-safe",current) == BUFFER_SIZE)
+                if (snprintf(buffer,BUFFER_SIZE,"/dev/cpu/%lli/msr_safe",current) == BUFFER_SIZE)
                 {
                     closedir(dir);
                     return -ENOMEM;
@@ -130,7 +130,7 @@ static double get_default_unit(long unsigned cpu)
         fds[cpu] = open(buffer, O_RDONLY);
         if ( fds[cpu] < 0 )
         {
-            if ( snprintf(buffer,BUFFER_SIZE,"/dev/cpu/%lu/msr-safe",cpu) == BUFFER_SIZE )
+            if ( snprintf(buffer,BUFFER_SIZE,"/dev/cpu/%lu/msr_safe",cpu) == BUFFER_SIZE )
                 return -1.0;
             fds[cpu] = open(buffer, O_RDONLY);
             if ( fds[cpu] < 0 )
@@ -211,7 +211,7 @@ static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, 
         fds[cpu] = open(buffer, O_RDONLY);
         if ( fds[cpu] < 0 )
         {
-            if ( snprintf(buffer,BUFFER_SIZE,"/dev/cpu/%i/msr-safe",cpu) == BUFFER_SIZE )
+            if ( snprintf(buffer,BUFFER_SIZE,"/dev/cpu/%i/msr_safe",cpu) == BUFFER_SIZE )
                 return NULL;
             fds[cpu] = open(buffer, O_RDONLY);
             if ( fds[cpu] < 0 )
