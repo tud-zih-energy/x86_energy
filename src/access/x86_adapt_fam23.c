@@ -69,7 +69,7 @@ static double get_default_unit()
         return -1.0;
     }
 
-    int fd = x86_adapt_get_device_ro(X86_ADAPT_CPU, 0);
+    int fd = x86_adapt_get_device_ro(X86_ADAPT_DIE, 0);
     if (fd <= 0)
         return -1.0;
 
@@ -83,9 +83,8 @@ static double get_default_unit()
 
     modifier_u64 &= 0x1F00;
     modifier_u64 = modifier_u64 >> 8;
-    double modifier_dbl = modifier_u64;
-    modifier_dbl = 1.0 / pow(2.0, modifier_dbl);
-    default_unit=modifier_dbl;
+    default_unit = modifier_u64;
+    default_unit = 1.0 / pow(2.0, default_unit);
     return default_unit;
 }
 

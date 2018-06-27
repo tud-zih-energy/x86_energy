@@ -141,7 +141,7 @@ static double get_default_unit(long unsigned cpu)
         }
     }
     uint64_t modifier_u64;
-    int result=pread(fds[cpu],&modifier_u64,8,0xC0010299);
+    int result=pread(fds[cpu],&modifier_u64,8,MSR_PWR_UNIT);
 
     /* close if was not open before*/
     if (already_opened <=0)
