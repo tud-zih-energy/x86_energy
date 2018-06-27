@@ -175,13 +175,16 @@ static int init( void ){
 static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, size_t index )
 {
     int cpu;
+    uint64_t reg;
     switch (counter_type)
     {
     case    X86_ENERGY_COUNTER_PCKG:
         cpu=get_test_cpu(X86_ENERGY_GRANULARITY_SOCKET, index);
+        reg=MSR_PKG_ENERGY_STATUS;
         break;
     case    X86_ENERGY_COUNTER_SINGLE_CORE:
         cpu=get_test_cpu(X86_ENERGY_GRANULARITY_CORE, index);
+        reg=MSR_CORE_ENERGY_STATUS;
         break;
 /*    case    X86_ENERGY_COUNTER_SINGLE_CORE:
         cpu=get_test_cpu(X86_ENERGY_GRANULARITY_CORE, index);
@@ -214,7 +217,6 @@ static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, 
     }
 
     /* try to read */
-    uint64_t reg;
     double unit=get_default_unit(cpu);
     int64_t reading;
     int result=pread(fds[cpu],&reading,8,reg);
