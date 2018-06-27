@@ -30,7 +30,7 @@ x86_energy_mechanisms_t * x86_energy_get_avail_mechanism(void)
     if (num_packages <= 0)
         return NULL;
 
-    bool is_intel=false,is_amd=false;
+    bool is_intel=false,is_amd=false, is_amd_rapl=false;
     bool supported[X86_ENERGY_COUNTER_SIZE];
     for ( int i = 0 ; i < X86_ENERGY_COUNTER_SIZE ; i++ )
         supported[ i ] = false;
@@ -168,6 +168,13 @@ x86_energy_mechanisms_t * x86_energy_get_avail_mechanism(void)
             is_amd=true;
             supported[X86_ENERGY_COUNTER_PCKG]=true;
         }
+        if ( FAMILY(eax) + EXT_FAMILY(eax) == 17 ||
+                FAMILY(eax) + EXT_FAMILY(eax) == 23   )
+        {
+            is_amd_rapl=true;
+            supported[X86_ENERGY_COUNTER_PCKG]=true;
+            supported[X86_ENERGY_COUNTER_SINGLE_CORE]=true;
+        }
     }
     else
         return NULL;
@@ -225,7 +232,24 @@ x86_energy_mechanisms_t * x86_energy_get_avail_mechanism(void)
 #endif
         return t;
     }
-    // TODO Fam 23
+    if ( is_amd_rapl )
+    {
+        x86_energy_mechanisms_t * t = malloc(sizeof(x86_energy_mechanisms_t));
+        t->name="AMD RAPL";
+        for (int i=0;i<X86_ENERGY_COUNTER_SIZE;i++)
+            t->source_granularities[i]=X86_ENERGY_GRANULARITY_SIZE;
+        t->source_granularities[X86_ENERGY_COUNTER_SINGLE_CORE] = X86_ENERGY_GRANULARITY_CORE;
+        t->source_granularities[X86_ENERGY_COUNTER_PCKG] = X86_ENERGY_GRANULARITY_SOCKET;
+
+        t->nr_avail_sources=1;
+        t->avail_sources= malloc(1*sizeof(x86_energy_access_source_t));
+        t->avail_sources[0]=msr_fam23_source;
+
+#ifdef USEX86_ADAPT
+        // TODO x86a
+#endif
+        return t;
+    }
 
 
     return NULL;

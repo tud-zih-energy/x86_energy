@@ -46,6 +46,7 @@ enum x86_energy_counter
     X86_ENERGY_COUNTER_DRAM = 2, /**< dram of one package / X86_ENERGY_GRANULARITY_SOCKET */
     X86_ENERGY_COUNTER_GPU = 3, /**< gpu of one package / X86_ENERGY_GRANULARITY_SOCKET */
     X86_ENERGY_COUNTER_PLATFORM = 4, /**< whole platform  / X86_ENERGY_GRANULARITY_SYSTEM */
+    X86_ENERGY_COUNTER_SINGLE_CORE = 5, /**< a single core / X86_ENERGY_GRANULARITY_CORE */
 
     /* Non ABI */
     X86_ENERGY_COUNTER_SIZE

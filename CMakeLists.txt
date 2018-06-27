@@ -20,6 +20,7 @@ add_library(x86_energy SHARED
     src/architecture/overflow_thread.c
     src/architecture/parse_architecture.c
     src/access/msr_fam15.c
+    src/access/msr_fam23.c
     src/access/msr.c
     src/access/perf.c
     src/access/procfs.c

@@ -24,7 +24,7 @@
 
 #define BUFFER_SIZE 4096
 
-#define AMD_MSR_PWR_UNIT                0xC0010299
+#define MSR_PWR_UNIT                    0xC0010299
 
 #define MSR_PKG_ENERGY_STATUS           0xC001029B
 #define MSR_CORE_ENERGY_STATUS          0xC001029A
@@ -114,9 +114,50 @@ static int * fds;
  */
 static double get_default_unit(long unsigned cpu)
 {
-    return 15.3E-6;
-#define AMD_MSR_CORE_ENERGY 0xC001029A
-#define AMD_MSR_PACKAGE_ENERGY 0xC001029B
+
+    static double default_unit = -1.0;
+    if ( default_unit > 0.0 )
+        return default_unit;
+    int already_opened=fds[cpu];
+    /* if not already open, open. if fail, return NULL */
+    if ( fds[cpu] <=0 )
+    {
+        char buffer [BUFFER_SIZE];
+        /* get uncore msr */
+
+        if ( snprintf(buffer,BUFFER_SIZE,"/dev/cpu/%lu/msr",cpu) == BUFFER_SIZE )
+            return -1.0;
+
+        fds[cpu] = open(buffer, O_RDONLY);
+        if ( fds[cpu] < 0 )
+        {
+            if ( snprintf(buffer,BUFFER_SIZE,"/dev/cpu/%lu/msr-safe",cpu) == BUFFER_SIZE )
+                return -1.0;
+            fds[cpu] = open(buffer, O_RDONLY);
+            if ( fds[cpu] < 0 )
+            {
+                return -1.0;
+            }
+        }
+    }
+    uint64_t modifier_u64;
+    int result=pread(fds[cpu],&modifier_u64,8,0xC0010299);
+
+    /* close if was not open before*/
+    if (already_opened <=0)
+    {
+        close(fds[cpu]);
+        fds[cpu]=-1;
+    }
+    if (result != 8)
+        return -1.0;
+
+
+    modifier_u64 &= 0x1F00;
+    modifier_u64 = modifier_u64 >> 8;
+    default_unit = modifier_u64;
+    default_unit = 1.0 / pow(2.0, default_unit);
+    return default_unit;
 }
 
 
@@ -139,8 +180,8 @@ static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, 
     case    X86_ENERGY_COUNTER_PCKG:
         cpu=get_test_cpu(X86_ENERGY_GRANULARITY_SOCKET, index);
         break;
-    case    X86_ENERGY_COUNTER_DRAM:
-        cpu=get_test_cpu(X86_ENERGY_GRANULARITY_SOCKET, index);
+    case    X86_ENERGY_COUNTER_SINGLE_CORE:
+        cpu=get_test_cpu(X86_ENERGY_GRANULARITY_CORE, index);
         break;
 /*    case    X86_ENERGY_COUNTER_SINGLE_CORE:
         cpu=get_test_cpu(X86_ENERGY_GRANULARITY_CORE, index);
@@ -238,7 +279,7 @@ static void fini( void )
     x86_energy_overflow_freeall(&msr_ov);
 }
 
-x86_energy_access_source_t msr_source =
+x86_energy_access_source_t msr_fam23_source =
 {
     .name="msr-rapl-fam23",
     .init=init,
