@@ -458,7 +458,9 @@ void x86_energy_free_architecture_nodes( x86_energy_architecture_node_t * root )
     }
     free(root->children);
     free(root->name);
-    free(root);
+
+    if (root->granularity == X86_ENERGY_GRANULARITY_SYSTEM)
+        free(root);
 }
 
 x86_energy_architecture_node_t * x86_energy_find_arch_for_cpu(x86_energy_architecture_node_t * root, enum x86_energy_granularity granularity, int cpu)
