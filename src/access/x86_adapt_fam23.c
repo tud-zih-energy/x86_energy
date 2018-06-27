@@ -156,7 +156,7 @@ static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, 
     def->reg=xa_index;
     def->last_reading=current_setting;
     def->cpu=cpu;
-    def->unit=modifier_dbl;
+    def->unit=unit;
     def->device=fd;
     switch (counter_type)
     {
