@@ -197,13 +197,13 @@ static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, 
         char buffer [BUFFER_SIZE];
         /* get uncore msr */
 
-        if ( snprintf(buffer,BUFFER_SIZE,"/dev/cpu/%lu/msr",cpu) == BUFFER_SIZE )
+        if ( snprintf(buffer,BUFFER_SIZE,"/dev/cpu/%d/msr",cpu) == BUFFER_SIZE )
             return NULL;
 
         fds[cpu] = open(buffer, O_RDONLY);
         if ( fds[cpu] < 0 )
         {
-            if ( snprintf(buffer,BUFFER_SIZE,"/dev/cpu/%lu/msr-safe",cpu) == BUFFER_SIZE )
+            if ( snprintf(buffer,BUFFER_SIZE,"/dev/cpu/%d/msr-safe",cpu) == BUFFER_SIZE )
                 return NULL;
             fds[cpu] = open(buffer, O_RDONLY);
             if ( fds[cpu] < 0 )
