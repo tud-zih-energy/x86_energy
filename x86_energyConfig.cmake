@@ -1,4 +1,4 @@
-include("${CMAKE_CURRENT_LIST_DIR}/ix86_energyTargets.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/x86_energyTargets.cmake")
 
 set(x86_energy_FOUND TRUE)
 
