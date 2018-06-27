@@ -73,7 +73,7 @@ static double get_default_unit()
     if (fd <= 0)
         return -1.0;
 
-    uint64_t modifier_u64
+    uint64_t modifier_u64;
     if (x86_adapt_get_setting(fd, xa_index_unit, &modifier_u64) != 8)
     {
         x86_adapt_put_device(X86_ADAPT_DIE, 0);
