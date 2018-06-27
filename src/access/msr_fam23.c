@@ -192,21 +192,21 @@ static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, 
     if ( cpu < 0 )
         return NULL;
     /* if not already open, open. if fail, return NULL */
-    if ( fds[index] <=0 )
+    if ( fds[cpu] <=0 )
     {
         char buffer [BUFFER_SIZE];
         /* get uncore msr */
 
-        if ( snprintf(buffer,BUFFER_SIZE,"/dev/cpu/%lu/msr",index) == BUFFER_SIZE )
+        if ( snprintf(buffer,BUFFER_SIZE,"/dev/cpu/%lu/msr",cpu) == BUFFER_SIZE )
             return NULL;
 
-        fds[index] = open(buffer, O_RDONLY);
-        if ( fds[index] < 0 )
+        fds[cpu] = open(buffer, O_RDONLY);
+        if ( fds[cpu] < 0 )
         {
-            if ( snprintf(buffer,BUFFER_SIZE,"/dev/cpu/%lu/msr-safe",index) == BUFFER_SIZE )
+            if ( snprintf(buffer,BUFFER_SIZE,"/dev/cpu/%lu/msr-safe",cpu) == BUFFER_SIZE )
                 return NULL;
-            fds[index] = open(buffer, O_RDONLY);
-            if ( fds[index] < 0 )
+            fds[cpu] = open(buffer, O_RDONLY);
+            if ( fds[cpu] < 0 )
             {
                 return NULL;
             }
@@ -220,15 +220,15 @@ static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, 
     int result=pread(fds[cpu],&reading,8,reg);
     if (result!=8)
     {
-        close(fds[index]);
-        fds[index]=0;
+        close(fds[cpu]);
+        fds[cpu]=0;
         return NULL;
     }
     struct reader_def * def = malloc (sizeof(struct reader_def));
     if (def == NULL)
     {
-        close(fds[index]);
-        fds[index]=0;
+        close(fds[cpu]);
+        fds[cpu]=0;
         return NULL;
     }
     def->reg=reg;
@@ -237,8 +237,8 @@ static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, 
     def->unit=unit;
     if (x86_energy_overflow_thread_create(&msr_ov,cpu,&def->thread,&def->mutex,do_read,def, 30000000))
     {
-        close(fds[index]);
-        fds[index]=0;
+        close(fds[cpu]);
+        fds[cpu]=0;
         free(def);
         return NULL;
     }
