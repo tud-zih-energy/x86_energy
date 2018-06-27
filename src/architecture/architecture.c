@@ -241,11 +241,14 @@ x86_energy_mechanisms_t * x86_energy_get_avail_mechanism(void)
         t->source_granularities[X86_ENERGY_COUNTER_PCKG] = X86_ENERGY_GRANULARITY_SOCKET;
 
         t->nr_avail_sources=1;
-        t->avail_sources= malloc(1*sizeof(x86_energy_access_source_t));
+#ifdef USEX86_ADAPT
+        t->nr_avail_sources++;
+#endif
+        t->avail_sources= malloc(t->nr_avail_sources*sizeof(x86_energy_access_source_t));
         t->avail_sources[0]=msr_fam23_source;
 
 #ifdef USEX86_ADAPT
-        // TODO x86a
+        t->avail_sources[1]=x86a_fam23_source;
 #endif
         return t;
     }
