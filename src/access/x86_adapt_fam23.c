@@ -76,10 +76,10 @@ static double get_default_unit()
     uint64_t modifier_u64;
     if (x86_adapt_get_setting(fd, xa_index_unit, &modifier_u64) != 8)
     {
-        x86_adapt_put_device(X86_ADAPT_DIE, 0);
+        //    TODO: x86_adapt_put_device(X86_ADAPT_DIE, 0);
         return -1.0;
     }
-    x86_adapt_put_device(X86_ADAPT_DIE, 0);
+//    TODO: x86_adapt_put_device(X86_ADAPT_DIE, 0);
 
     modifier_u64 &= 0x1F00;
     modifier_u64 = modifier_u64 >> 8;
@@ -133,10 +133,11 @@ static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, 
     double unit=get_default_unit();
     if (unit < 0.0)
     {
-        if (xa_type == X86_ADAPT_DIE)
+        //    TODO: x86_adapt_put_device
+        /*if (xa_type == X86_ADAPT_DIE)
             x86_adapt_put_device(X86_ADAPT_DIE, index);
         else
-            x86_adapt_put_device(X86_ADAPT_CPU, cpu);
+            x86_adapt_put_device(X86_ADAPT_CPU, cpu);*/
         return NULL;
     }
 
@@ -145,10 +146,11 @@ static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, 
     uint64_t current_setting;
     if (x86_adapt_get_setting(fd, xa_index, &current_setting) != 8)
     {
-        if (xa_type == X86_ADAPT_DIE)
+        //    TODO: x86_adapt_put_device
+        /*if (xa_type == X86_ADAPT_DIE)
             x86_adapt_put_device(X86_ADAPT_DIE, index);
         else
-            x86_adapt_put_device(X86_ADAPT_CPU, cpu);
+            x86_adapt_put_device(X86_ADAPT_CPU, cpu);*/
         return NULL;
     }
 
@@ -168,20 +170,22 @@ static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, 
         break;
     default:
         free(def);
-        if (xa_type == X86_ADAPT_DIE)
+        //    TODO: x86_adapt_put_device
+        /*if (xa_type == X86_ADAPT_DIE)
             x86_adapt_put_device(X86_ADAPT_DIE, index);
         else
-            x86_adapt_put_device(X86_ADAPT_CPU, cpu);
+            x86_adapt_put_device(X86_ADAPT_CPU, cpu);*/
         return NULL;
     }
     def->pkg=index;
     if (x86_energy_overflow_thread_create(&x86a_ov,cpu,&def->thread,&def->mutex,do_read,def, 30000000))
     {
         free(def);
-        if (xa_type == X86_ADAPT_DIE)
+        //    TODO: x86_adapt_put_device
+        /*if (xa_type == X86_ADAPT_DIE)
             x86_adapt_put_device(X86_ADAPT_DIE, index);
         else
-            x86_adapt_put_device(X86_ADAPT_CPU, cpu);
+            x86_adapt_put_device(X86_ADAPT_CPU, cpu);*/
         return NULL;
     }
     return (x86_energy_single_counter_t) def;
@@ -208,10 +212,12 @@ static void do_close( x86_energy_single_counter_t counter )
 {
     struct reader_def * def = (struct reader_def *) counter;
     x86_energy_overflow_thread_remove_call(&x86a_ov,def->cpu,do_read,counter);
-    if (def->is_per_core)
-        x86_adapt_put_device(X86_ADAPT_CPU,def->cpu);
+
+    //    TODO: x86_adapt_put_device
+    /*if (def->per_core)
+        x86_adapt_put_device(X86_ADAPT_CPU, cpu);
     else
-        x86_adapt_put_device(X86_ADAPT_DIE,def->pkg);
+        x86_adapt_put_device(X86_ADAPT_DIE, def->package);*/
     free(def);
 }
 static void fini( void )
