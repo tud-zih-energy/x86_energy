@@ -186,9 +186,6 @@ static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, 
         cpu=get_test_cpu(X86_ENERGY_GRANULARITY_CORE, index);
         reg=MSR_CORE_ENERGY_STATUS;
         break;
-/*    case    X86_ENERGY_COUNTER_SINGLE_CORE:
-        cpu=get_test_cpu(X86_ENERGY_GRANULARITY_CORE, index);
-        break;*/
     default:
         return NULL;
     }

@@ -25,6 +25,7 @@ extern x86_energy_access_source_t sysfs_fam15_source;
 
 #ifdef USEX86_ADAPT
 extern x86_energy_access_source_t x86a_source;
+extern x86_energy_access_source_t x86a_fam23_source;
 #endif
 
 #endif /* SRC_INCLUDE_ACCESS_H_ */
