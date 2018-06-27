@@ -1,7 +1,8 @@
+#include <x86_energy.h>
+
 #include <stdio.h>
+#include <unistd.h>
 
-
-#include "../include/x86_energy.h"
 
 void main()
 {
@@ -47,4 +48,5 @@ void main()
       }
       a->avail_sources[i].fini();
   }
+  x86_energy_free_architecture_nodes(hw_root);
 }
