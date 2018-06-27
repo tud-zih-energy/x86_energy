@@ -66,8 +66,8 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     case X86_ENERGY_COUNTER_DRAM: /* fall-through */
     case X86_ENERGY_COUNTER_GPU: /* fall-through */
     case X86_ENERGY_COUNTER_PLATFORM:
-        break
-    default: return;
+        break;
+    default: return NULL;
     }
     if (counter_type == X86_ENERGY_COUNTER_SIZE) return NULL;
     int given_package=index;

@@ -92,8 +92,8 @@ static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, 
     case X86_ENERGY_COUNTER_CORES: /* fall-through */
     case X86_ENERGY_COUNTER_DRAM: /* fall-through */
     case X86_ENERGY_COUNTER_GPU: /* fall-through */
-        break
-    default: return;
+        break;
+    default: return NULL;
     }
 
     int cpu=get_test_cpu(X86_ENERGY_GRANULARITY_SOCKET, index);
