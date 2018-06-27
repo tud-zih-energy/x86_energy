@@ -35,6 +35,7 @@ static struct thread_info * add_thread_info(struct ov_struct * ov,int cpu, long 
     memset(info,0,sizeof(struct thread_info));
     pthread_mutex_init(&info->mutex,NULL);
     ov->thread_infos[ov->nr_thread_infos-1]=info;
+    info->cpu=cpu;
     info->usleep_time=usleep_time;
     return info;
 }
