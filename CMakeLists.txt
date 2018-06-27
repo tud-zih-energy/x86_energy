@@ -34,7 +34,7 @@ find_package(X86Adapt)
 
 if (X86Adapt_FOUND)
     target_include_directories(x86_energy PRIVATE ${X86_ADAPT_INCLUDE_DIRS})
-    target_sources(x86_energy PRIVATE src/access/x86_adapt.c)
+	target_sources(x86_energy PRIVATE src/access/x86_adapt.c src/access/x86_adapt_fam23.c)
     target_compile_definitions(x86_energy PRIVATE USEX86_ADAPT)
     target_link_libraries(x86_energy PUBLIC ${X86_ADAPT_LIBRARIES})
 endif()
