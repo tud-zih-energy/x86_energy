@@ -28,7 +28,21 @@ add_library(x86_energy SHARED
     src/access/sysfs.c
 )
 
+add_library(x86_energy-static STATIC
+    src/architecture/architecture.c
+    src/architecture/overflow_thread.c
+    src/architecture/parse_architecture.c
+    src/access/msr_fam15.c
+    src/access/msr_fam23.c
+    src/access/msr.c
+    src/access/perf.c
+    src/access/procfs.c
+    src/access/sysfs_fam15.c
+    src/access/sysfs.c
+)
+
 target_link_libraries(x86_energy PUBLIC Threads::Threads m)
+target_link_libraries(x86_energy-static PUBLIC Threads::Threads m)
 
 find_package(X86Adapt)
 
@@ -37,6 +51,11 @@ if (X86Adapt_FOUND)
 	target_sources(x86_energy PRIVATE src/access/x86_adapt.c src/access/x86_adapt_fam23.c)
     target_compile_definitions(x86_energy PRIVATE USEX86_ADAPT)
     target_link_libraries(x86_energy PUBLIC ${X86_ADAPT_LIBRARIES})
+
+    target_include_directories(x86_energy-static PRIVATE ${X86_ADAPT_INCLUDE_DIRS})
+    target_sources(x86_energy-static PRIVATE src/access/x86_adapt.c src/access/x86_adapt_fam23.c)
+    target_compile_definitions(x86_energy-static PRIVATE USEX86_ADAPT)
+    target_link_libraries(x86_energy-static PUBLIC ${X86_ADAPT_LIBRARIES})
 endif()
 
 find_package(Likwid)
@@ -46,6 +65,11 @@ if (LIKWID_FOUND)
     target_sources(x86_energy PRIVATE src/access/likwid.c)
     target_compile_definitions(x86_energy PRIVATE USELIKWID)
     target_link_libraries(x86_energy PUBLIC ${LIKWID_LIBRARIES})
+
+    target_include_directories(x86_energy-static PRIVATE ${LIKWID_INCLUDE_DIRS})
+    target_sources(x86_energy-static PRIVATE src/access/likwid.c)
+    target_compile_definitions(x86_energy-static PRIVATE USELIKWID)
+    target_link_libraries(x86_energy-static PUBLIC ${LIKWID_LIBRARIES})
 endif()
 
 target_include_directories(x86_energy PUBLIC
@@ -55,7 +79,17 @@ target_include_directories(x86_energy PUBLIC
 set_target_properties(x86_energy PROPERTIES PUBLIC_HEADER "include/x86_energy.h;include/x86_energy.hpp")
 target_compile_features(x86_energy PUBLIC c_std_99)
 
-add_library(x86_energy::x86_energy ALIAS x86_energy)
+target_include_directories(x86_energy-static PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
+set_target_properties(x86_energy-static PROPERTIES
+    POSITION_INDEPENDENT_CODE TRUE
+    OUTPUT_NAME "x86_energy"
+)
+target_compile_features(x86_energy-static PUBLIC c_std_99)
+
+add_library(x86_energy::x86_energy ALIAS x86_energy-static)
 
 add_library(x86_energy_cxx INTERFACE)
 target_link_libraries(x86_energy_cxx INTERFACE x86_energy::x86_energy)
@@ -63,25 +97,35 @@ target_compile_features(x86_energy_cxx INTERFACE cxx_std_11)
 
 add_library(x86_energy::x86_energy_cxx ALIAS x86_energy_cxx)
 
-add_subdirectory(test)
+if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+    # build Debug with all warnings
+    target_compile_options(x86_energy INTERFACE $<$<CONFIG:Debug>:-Wall -pedantic -Wextra>)
+    target_compile_options(x86_energy-static INTERFACE $<$<CONFIG:Debug>:-Wall -pedantic -Wextra>)
 
-install(TARGETS x86_energy x86_energy_cxx
-    EXPORT x86_energyTargets
-    LIBRARY DESTINATION lib
-    PUBLIC_HEADER DESTINATION include
-)
+    add_subdirectory(test)
 
-install(EXPORT x86_energyTargets
-    DESTINATION share/cmake/x86_energy
-    NAMESPACE x86_energy::
-)
+    install(TARGETS x86_energy x86_energy-static x86_energy_cxx
+        EXPORT x86_energyTargets
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
+        PUBLIC_HEADER DESTINATION include
+    )
 
-include(CMakePackageConfigHelpers)
-write_basic_package_version_File("x86_energyConfigVersion.cmake"
-    VERSION ${x86_energy_VERSION}
-    COMPATIBILITY SameMajorVersion
-)
+    install(EXPORT x86_energyTargets
+        DESTINATION share/cmake/x86_energy
+        NAMESPACE x86_energy::
+    )
 
-install(FILES "x86_energyConfig.cmake" "${CMAKE_CURRENT_BINARY_DIR}/x86_energyConfigVersion.cmake"
-    DESTINATION share/cmake/x86_energy
-)
+    include(CMakePackageConfigHelpers)
+    write_basic_package_version_File("x86_energyConfigVersion.cmake"
+        VERSION ${x86_energy_VERSION}
+        COMPATIBILITY SameMajorVersion
+    )
+
+    install(FILES "x86_energyConfig.cmake" "${CMAKE_CURRENT_BINARY_DIR}/x86_energyConfigVersion.cmake"
+        DESTINATION share/cmake/x86_energy
+    )
+
+else()
+    set_target_properties(x86_energy-static x86_energy PROPERTIES EXCLUDE_FROM_ALL TRUE)
+endif()
