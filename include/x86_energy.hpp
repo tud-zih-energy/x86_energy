@@ -322,7 +322,7 @@ public:
 
         x86_energy_single_counter_t result =
             source_->setup(static_cast<x86_energy_counter>(counter), index);
-        if (result != NULL)
+        if (result == nullptr)
         {
             throw std::runtime_error("could not set up source");
         }
