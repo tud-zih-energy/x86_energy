@@ -15,8 +15,7 @@
 #include <system_error>
 #include <vector>
 
-extern "C"
-{
+extern "C" {
 #include <x86_energy.h>
 }
 
@@ -320,7 +319,14 @@ public:
         {
             throw std::runtime_error("Trying to use an uninitialized access source");
         }
-        return { source_, source_->setup(static_cast<x86_energy_counter>(counter), index) };
+
+        x86_energy_single_counter_t result =
+            source_->setup(static_cast<x86_energy_counter>(counter), index);
+        if (result != NULL)
+        {
+            throw std::runtime_error("could not set up source");
+        }
+        return { source_, result };
     }
 
 private:
