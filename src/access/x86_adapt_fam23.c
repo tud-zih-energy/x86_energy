@@ -5,17 +5,17 @@
  *      Author: rschoene
  */
 
-#include <unistd.h>
-#include <string.h>
-#include <stdlib.h>
 #include <math.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #include <x86_adapt.h>
 
 #include "../../include/x86_energy.h"
-#include "../include/cpuid.h"
 #include "../include/access.h"
 #include "../include/architecture.h"
+#include "../include/cpuid.h"
 #include "../include/overflow_thread.h"
 
 #define BUFFER_SIZE 4096
@@ -38,18 +38,19 @@ struct reader_def
 
 static struct ov_struct x86a_ov;
 
-static double do_read( x86_energy_single_counter_t  counter);
+static double do_read(x86_energy_single_counter_t counter);
 
-static int init( void ){
+static int init(void)
+{
 
     int ret = x86_adapt_init();
 
-    if ( ret )
+    if (ret)
         return 1;
 
     /* search for core freq parameters */
     int xa_index = x86_adapt_lookup_ci_name(X86_ADAPT_DIE, PKG_REGISTER);
-    if (xa_index < 0 )
+    if (xa_index < 0)
         return 1;
     return 0;
 }
@@ -60,11 +61,11 @@ static double get_default_unit()
 {
 
     static double default_unit = -1.0;
-    if ( default_unit > 0.0 )
+    if (default_unit > 0.0)
         return default_unit;
 
     int xa_index_unit = x86_adapt_lookup_ci_name(X86_ADAPT_DIE, POWER_UNIT_REGISTER);
-    if (xa_index_unit < 0 )
+    if (xa_index_unit < 0)
     {
         return -1.0;
     }
@@ -79,7 +80,7 @@ static double get_default_unit()
         //    TODO: x86_adapt_put_device(X86_ADAPT_DIE, 0);
         return -1.0;
     }
-//    TODO: x86_adapt_put_device(X86_ADAPT_DIE, 0);
+    //    TODO: x86_adapt_put_device(X86_ADAPT_DIE, 0);
 
     modifier_u64 &= 0x1F00;
     modifier_u64 = modifier_u64 >> 8;
@@ -88,8 +89,7 @@ static double get_default_unit()
     return default_unit;
 }
 
-
-static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, size_t index )
+static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, size_t index)
 {
 
     int cpu;
@@ -99,24 +99,24 @@ static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, 
     switch (counter_type)
     {
     case X86_ENERGY_COUNTER_PCKG:
-        cpu=get_test_cpu(X86_ENERGY_GRANULARITY_SOCKET, index);
-        if ( cpu < 0 )
+        cpu = get_test_cpu(X86_ENERGY_GRANULARITY_SOCKET, index);
+        if (cpu < 0)
             return NULL;
         xa_index = x86_adapt_lookup_ci_name(X86_ADAPT_DIE, PKG_REGISTER);
         xa_type = X86_ADAPT_DIE;
-        if (xa_index < 0 )
+        if (xa_index < 0)
             return NULL;
         fd = x86_adapt_get_device_ro(X86_ADAPT_DIE, index);
         if (fd <= 0)
             return NULL;
         break;
     case X86_ENERGY_COUNTER_SINGLE_CORE:
-        cpu=get_test_cpu(X86_ENERGY_GRANULARITY_CORE, index);
-        if ( cpu < 0 )
+        cpu = get_test_cpu(X86_ENERGY_GRANULARITY_CORE, index);
+        if (cpu < 0)
             return NULL;
         xa_index = x86_adapt_lookup_ci_name(X86_ADAPT_CPU, CORE_REGISTER);
         xa_type = X86_ADAPT_CPU;
-        if (xa_index < 0 )
+        if (xa_index < 0)
             return NULL;
         fd = x86_adapt_get_device_ro(X86_ADAPT_CPU, cpu);
         if (fd <= 0)
@@ -128,8 +128,7 @@ static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, 
         return NULL;
     }
 
-
-    double unit=get_default_unit();
+    double unit = get_default_unit();
     if (unit < 0.0)
     {
         //    TODO: x86_adapt_put_device
@@ -153,19 +152,19 @@ static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, 
         return NULL;
     }
 
-    struct reader_def * def = malloc (sizeof(struct reader_def));
-    def->reg=xa_index;
-    def->last_reading=current_setting;
-    def->cpu=cpu;
-    def->unit=unit;
-    def->device=fd;
+    struct reader_def* def = malloc(sizeof(struct reader_def));
+    def->reg = xa_index;
+    def->last_reading = current_setting;
+    def->cpu = cpu;
+    def->unit = unit;
+    def->device = fd;
     switch (counter_type)
     {
     case X86_ENERGY_COUNTER_PCKG:
-        def->is_per_core=0;
+        def->is_per_core = 0;
         break;
     case X86_ENERGY_COUNTER_SINGLE_CORE:
-        def->is_per_core=1;
+        def->is_per_core = 1;
         break;
     default:
         free(def);
@@ -176,8 +175,9 @@ static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, 
             x86_adapt_put_device(X86_ADAPT_CPU, cpu);*/
         return NULL;
     }
-    def->pkg=index;
-    if (x86_energy_overflow_thread_create(&x86a_ov,cpu,&def->thread,&def->mutex,do_read,def, 30000000))
+    def->pkg = index;
+    if (x86_energy_overflow_thread_create(&x86a_ov, cpu, &def->thread, &def->mutex, do_read, def,
+                                          30000000))
     {
         free(def);
         //    TODO: x86_adapt_put_device
@@ -187,30 +187,30 @@ static x86_energy_single_counter_t setup( enum x86_energy_counter counter_type, 
             x86_adapt_put_device(X86_ADAPT_CPU, cpu);*/
         return NULL;
     }
-    return (x86_energy_single_counter_t) def;
+    return (x86_energy_single_counter_t)def;
 }
 
-static double do_read( x86_energy_single_counter_t  counter)
+static double do_read(x86_energy_single_counter_t counter)
 {
-    struct reader_def * def = (struct reader_def *) counter;
+    struct reader_def* def = (struct reader_def*)counter;
     uint64_t reading;
     if (x86_adapt_get_setting(def->device, def->reg, &reading) != 8)
     {
         return -1.0;
     }
-    if (reading < (def->last_reading & 0xFFFFFFFFULL) )
+    if (reading < (def->last_reading & 0xFFFFFFFFULL))
     {
         def->last_reading = (def->last_reading & 0xFFFFFFFF00000000ULL) + 0x100000000 + reading;
     }
     else
         def->last_reading = (def->last_reading & 0xFFFFFFFF00000000ULL) + reading;
-    return def->unit*def->last_reading;
+    return def->unit * def->last_reading;
 }
 
-static void do_close( x86_energy_single_counter_t counter )
+static void do_close(x86_energy_single_counter_t counter)
 {
-    struct reader_def * def = (struct reader_def *) counter;
-    x86_energy_overflow_thread_remove_call(&x86a_ov,def->cpu,do_read,counter);
+    struct reader_def* def = (struct reader_def*)counter;
+    x86_energy_overflow_thread_remove_call(&x86a_ov, def->cpu, do_read, counter);
 
     //    TODO: x86_adapt_put_device
     /*if (def->per_core)
@@ -219,18 +219,15 @@ static void do_close( x86_energy_single_counter_t counter )
         x86_adapt_put_device(X86_ADAPT_DIE, def->package);*/
     free(def);
 }
-static void fini( void )
+static void fini(void)
 {
     x86_energy_overflow_thread_killall(&x86a_ov);
     x86_energy_overflow_freeall(&x86a_ov);
 }
 
-x86_energy_access_source_t x86a_fam23_source =
-{
-    .name="x86a-rapl-amd",
-    .init=init,
-    .setup=setup,
-    .read=do_read,
-    .close=do_close,
-    .fini=fini
-};
+x86_energy_access_source_t x86a_fam23_source = {.name = "x86a-rapl-amd",
+                                                .init = init,
+                                                .setup = setup,
+                                                .read = do_read,
+                                                .close = do_close,
+                                                .fini = fini };

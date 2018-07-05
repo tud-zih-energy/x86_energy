@@ -8,7 +8,6 @@
 #ifndef SRC_INCLUDE_CPUID_H_
 #define SRC_INCLUDE_CPUID_H_
 
-
 /* some definitions to parse cpuid */
 #define STEPPING(eax) (eax & 0xF)
 #define MODEL(eax) ((eax >> 4) & 0xF)
@@ -18,12 +17,9 @@
 #define EXT_FAMILY(eax) ((eax >> 20) & 0xFF)
 
 /* cpuid call in C */
-static inline void cpuid(unsigned int *eax, unsigned int *ebx,
-                         unsigned int *ecx, unsigned int *edx)
+static inline void cpuid(unsigned int* eax, unsigned int* ebx, unsigned int* ecx, unsigned int* edx)
 {
-        /* ecx is often an input as well as an output. */
-        asm volatile("cpuid"
-            : "=a" (*eax), "=b" (*ebx), "=c" (*ecx), "=d" (*edx)
-            : "0" (*eax), "2" (*ecx));
+    /* ecx is often an input as well as an output. */
+    asm volatile("cpuid" : "=a"(*eax), "=b"(*ebx), "=c"(*ecx), "=d"(*edx) : "0"(*eax), "2"(*ecx));
 }
 #endif /* SRC_INCLUDE_CPUID_H_ */

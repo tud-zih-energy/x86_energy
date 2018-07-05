@@ -14,5 +14,4 @@
  */
 long get_test_cpu(enum x86_energy_granularity given_granularity, unsigned long int id);
 
-
 #endif /* SRC_INCLUDE_ARCHITECTURE_H_ */
