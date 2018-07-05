@@ -188,6 +188,10 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
             t->source_granularities[X86_ENERGY_COUNTER_PLATFORM] = X86_ENERGY_GRANULARITY_SYSTEM;
         else
             t->source_granularities[X86_ENERGY_COUNTER_PLATFORM] = X86_ENERGY_GRANULARITY_SIZE;
+        if (supported[X86_ENERGY_COUNTER_SINGLE_CORE])
+            t->source_granularities[X86_ENERGY_COUNTER_SINGLE_CORE] = X86_ENERGY_GRANULARITY_CORE;
+        else
+            t->source_granularities[X86_ENERGY_COUNTER_SINGLE_CORE] = X86_ENERGY_GRANULARITY_SIZE;
         t->nr_avail_sources = 3;
 #ifdef USELIKWID
         t->nr_avail_sources += 1;
