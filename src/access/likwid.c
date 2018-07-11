@@ -8,6 +8,7 @@
 #include <likwid.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include "../include/access.h"
 #include "../include/architecture.h"
@@ -31,27 +32,59 @@ struct reader_def
 
 static struct ov_struct likwid_ov;
 
+static long int * initialized_cpus;
+static long int initialized_cpus_length;
+
+static int is_likwid_initialized(long int cpu)
+{
+    for ( long int i = 0; i < initialized_cpus_length; i++)
+        if ( initialized_cpus[ i ] == cpu )
+            return true;
+    return false;
+}
+
+static int add_likwid_initialize(long int cpu)
+{
+    if ( is_likwid_initialized( cpu ) )
+        return 0;
+    long int * tmp = realloc( initialized_cpus, ( initialized_cpus_length +1 ) * sizeof (long int) );
+    if ( tmp == NULL )
+        return 1;
+    initialized_cpus = tmp;
+    initialized_cpus [ initialized_cpus_length ] = cpu;
+    initialized_cpus_length++;
+    return 0;
+}
+
 static double do_read(x86_energy_single_counter_t counter);
 
 static int init(void)
 {
     int ret;
     HPMmode(ACCESSMODE_DAEMON);
-    ret = HPMinit();
-    if (ret)
-    {
-        return 1;
-    }
     ret = topology_init();
     if (ret)
     {
         return 1;
     }
+    ret = HPMinit();
+    if (ret)
+    {
+        return 1;
+    }
+
     ret = power_init(0);
     if (ret == 0)
     {
         return 1;
     }
+
+    ret = add_likwid_initialize( 0 );
+    if ( ret )
+    {
+        return 1;
+    }
+
     PowerInfo_t info = get_powerInfo();
     if (info == NULL)
         return 1;
@@ -93,6 +126,19 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
         return NULL;
     }
     uint32_t reading;
+
+    if ( ! is_likwid_initialized( cpu ) )
+    {
+        if ( HPMaddThread( cpu ) )
+            return NULL;
+
+        int ret = add_likwid_initialize( 0 );
+        if ( ret )
+        {
+            return NULL;
+        }
+    }
+
     if (power_read(cpu, reg, &reading))
     {
         return NULL;
@@ -142,6 +188,13 @@ static void fini(void)
 {
     x86_energy_overflow_thread_killall(&likwid_ov);
     x86_energy_overflow_freeall(&likwid_ov);
+
+    free( initialized_cpus );
+    initialized_cpus = NULL;
+    initialized_cpus_length = 0;
+
+    power_finalize();
+    topology_finalize();
 }
 
 x86_energy_access_source_t likwid_source = {.name = "likwid-rapl",
