@@ -35,7 +35,7 @@ static int read_file_long(char* file, long int* result)
     return 0;
 }
 
-static int read_file_long_mask(char* file, long int** result, int* length)
+static int read_file_long_list(char* file, long int** result, int* length)
 {
     char buffer[2048];
     int fd = open(file, O_RDONLY);
@@ -56,38 +56,99 @@ static int read_file_long_mask(char* file, long int** result, int* length)
     *result = NULL;
     *length = 0;
     long int nr_processed = 0;
-    for (int position_in_text = end_of_text; position_in_text >= 0; position_in_text--)
+
+    char* current_ptr = buffer;
+    char* next_ptr = NULL;
+
+
+    /*as long as strtol returns something valid, either !=0 or 0 with errno==0 */
+    while ( 1 )
     {
-        /* end string early */
-        buffer[position_in_text + 1] = '\0';
-        /* now read that ull */
-        char* endptr;
-        long int chunk = strtol(&buffer[position_in_text], &endptr, 16);
-
-        /* sometimes there are commas */
-        if (endptr == &buffer[position_in_text])
+        long int read_cpu = strtol( current_ptr, &next_ptr, 10 );
+        if ( read_cpu == 0 && errno != 0 )
         {
-            continue;
+            free(*result);
+            *result = NULL;
+            *length = 0;
+            return 1;
         }
-
-        for (int i = 0; i < 4; i++)
+        switch ( *next_ptr )
         {
-            if ((chunk >> (3 - i) & 1))
+        /* add cpu */
+        case ',':
+        {
+            long int* tmp = realloc(*result, ((*length) + 1) * sizeof(**result));
+            if (!tmp)
             {
-                long int* tmp = realloc(*result, ((*length) + 1) * sizeof(**result));
-                if (!tmp)
-                {
-                    free(*result);
-                    *result = NULL;
-                    *length = 0;
-                    return 1;
-                }
-                *result = tmp;
-                tmp[*length] = nr_processed * 4 + i;
-                (*length)++;
+                free(*result);
+                *result = NULL;
+                *length = 0;
+                return 1;
             }
+            *result = tmp;
+            tmp[*length] = read_cpu;
+            (*length)++;
+            /*continue at ',' +1 */
+            current_ptr = next_ptr + 1;
+            break;
         }
-        nr_processed++;
+        /* just return on end */
+        case '\n': /* fall-through */
+        case '\0':
+            return 0;
+        /* range: read another long int */
+        case '-':
+        {
+            current_ptr=next_ptr+1;
+            long int end_cpu = strtol( current_ptr, &next_ptr, 10 );
+            /* if read error return error */
+            if ( read_cpu == 0 && errno != 0 )
+            {
+                free(*result);
+                *result = NULL;
+                *length = 0;
+                return 1;
+            }
+            /* if no read error, add range: realloc, then fill */
+            long int* tmp = realloc(*result, ((*length) + ( end_cpu - read_cpu + 1)) * sizeof(**result));
+
+            if (!tmp)
+            {
+                free(*result);
+                *result = NULL;
+                *length = 0;
+                return 1;
+            }
+
+            for ( long int i = read_cpu; i <= end_cpu ; i ++ )
+                tmp[ *length + ( i - read_cpu ) ] = read_cpu ;
+
+            *result = tmp;
+            (*length) += end_cpu - read_cpu + 1;
+
+            /*next character should be ',' or '\0' */
+            switch ( *next_ptr )
+            {
+            case '\n': /* fall-through */
+            case '\0':
+                return 0;
+            case ',':
+                current_ptr = next_ptr + 1;
+            default:
+                free(*result);
+                *result = NULL;
+                *length = 0;
+                return 1;
+            }
+            break;
+        }
+        /* unexpected character return error */
+        default:
+            free(*result);
+            *result = NULL;
+            *length = 0;
+            return 1;
+        }
     }
     return 0;
 }
@@ -308,8 +369,8 @@ static int process_node(const char* sysfs_path, x86_energy_architecture_node_t* 
     long int* cpus;
     int nr_cpus;
     char filename[2048];
-    sprintf(filename, "%s/devices/system/node/node%" PRId32 "/cpumap", sysfs_path, node->id);
-    if (read_file_long_mask(filename, &cpus, &nr_cpus))
+    sprintf(filename, "%s/devices/system/node/node%" PRId32 "/cpulist", sysfs_path, node->id);
+    if (read_file_long_list(filename, &cpus, &nr_cpus))
     {
         return 1;
     }
@@ -346,9 +407,9 @@ static int process_node(const char* sysfs_path, x86_energy_architecture_node_t* 
 
         int nr_shared_cpus_l2;
         long int* shared_cpus_l2;
-        sprintf(filename, "%s/devices/system/cpu/cpu%ld/cache/index2/shared_cpu_map", sysfs_path,
+        sprintf(filename, "%s/devices/system/cpu/cpu%ld/cache/index2/shared_cpu_list", sysfs_path,
                 cpu);
-        if (read_file_long_mask(filename, &shared_cpus_l2, &nr_shared_cpus_l2))
+        if (read_file_long_list(filename, &shared_cpus_l2, &nr_shared_cpus_l2))
         {
             free(cpus);
             return 1;
@@ -356,9 +417,9 @@ static int process_node(const char* sysfs_path, x86_energy_architecture_node_t* 
 
         int nr_shared_cpus_l1;
         long int* shared_cpus_l1;
-        sprintf(filename, "%s/devices/system/cpu/cpu%ld/cache/index1/shared_cpu_map", sysfs_path,
+        sprintf(filename, "%s/devices/system/cpu/cpu%ld/cache/index1/shared_cpu_list", sysfs_path,
                 cpu);
-        if (read_file_long_mask(filename, &shared_cpus_l1, &nr_shared_cpus_l1))
+        if (read_file_long_list(filename, &shared_cpus_l1, &nr_shared_cpus_l1))
         {
             free(cpus);
             return 1;
