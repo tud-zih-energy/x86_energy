@@ -1,14 +1,9 @@
 [![Build Status](https://travis-ci.org/tud-zih-energy/x86_energy.svg?branch=master)](https://travis-ci.org/tud-zih-energy/x86_energy)
 
-# MSR & X86-Energy Libraries for Score-P (and VampirTrace)
+# X86-Energy Libraries for Score-P
 
-The `msr` library faciliates to reduce the number of open file handles to `/dev/*/msr` when multiple
-plugins are used. This is done by reference counting on the file descriptors.
-
-The `x86_energy` library allows to count power and energy values for Intel Sandybridge, AMD Bulldozer
-and newer architectures. It supports reading `msr` registers directly or through the `x86_adapt`
-library on Intel processors. If both of them are not available or the privilige is not sufficient 
-it fallsback to `powercap` values. None of them is needed for reading power and energy values on AMD Bulldozer CPUs.
+This library enables access to processor power and energy measurement facilities, i.e., RAPL and APM implementations from Intel and AMD.
+It supports different backends that are checked during compile and runtime.
 
 ## Compilation and Installation
 
@@ -20,59 +15,37 @@ To compile this plugin, you need:
 
 * `libpthread`
 
-* CMake
-
-* Reading `msr` directly:
-
-    The kernel module `msr` should be active (you might use `modprobe`) and you should have reading
-    access to `/dev/cpu/*/msr`.
-
-* Reading energy values through `x86_adapt`:
-
-    The kernel module `x86_adapt_driver` should be active and and should have reading access to
-    `/dev/x86_adapt/cpu/*`.
+* CMake 3.9+
 
 ### Build Options
 
-* `X86_ADAPT` (default off)
+* `CMAKE_INSTALL_PREFIX` (default `/usr/local`)
+    
+  Installation directory
+    
+* `CMAKE_BUILD_TYPE` (default `Debug`)
+   
+   Build type with different compiler options, can be `Debug` `Release` `MinSizeRel` `RelWithDebInfo`
 
-    Uses `x86_adapt` library instead of accessing `msr` directly.
+*  `X86_ADAPT_LIBRARIES`
+    
+  Libraries for x86\_adapt, e.g., `-DX86_ADAPT_LIBRARIES=/opt/x86_adapt/lib/libx86_adapt_static.a`
 
+*  `X86_ADAPT_INCLUDE_DIRS`
+    
+  Include directories for x86\_adapt, e.g., `-DX86_ADAPT_INCLUDE_DIRS=/opt/x86_adapt/include`
+
+*  `LIKWID_LIBRARIES`
+    
+  Libraries for likwid, e.g.`-DLIKWID_LIBRARIES=/opt/likwi/lib/liblikwid.so`
+
+*  `LIKWID_INCLUDE_DIRS`
+    
+    Include directories for likwid, e.g.`-DLIKWID_INCLUDE_DIRS=/opt/likwid/include`
 
 * `X86A_STATIC` (default on)
 
-    Link `x86_adapt` statically.
-
-* `X86A_DIR`
-
-    Path to `x86_adapt` directory.
-    Searches in `X86A_DIR/include` for the header files and in `X86A_DIR/lib` for the library.
-
-
-* `X86A_INC`
-
-    Path to `x86_adapt` header files.
-
-* `X86A_LIB`
-
-    Path to `x86_adapt` library.
-
-
-* `MSR_STATIC` (default on)
-
-    Link `libmsr` statically.
-
-* `MSR_DIR`
-
-    Path to `libmsr` directory.
-
-* `MSR_INC`
-
-    Path to `libmsr` headers.
-
-* `MSR_LIB`
-
-    Path to `libmsr` library.
+  Link `x86_adapt` statically, if it is found
 
 ### Building
 
@@ -83,32 +56,44 @@ To compile this plugin, you need:
 
 2. Invoking CMake
 
-        cmake ..
-
-    Example for using the `x86_adapt` library:
-
-        cmake .. -DX86_ADAPT=1 -DX86A_DIR=~/Software/x86_adapt
+        cmake .. (options)
 
 3. Invoking make
 
         make
+        
+4. Install
 
-4. Copy it to a location listed in `LD_LIBRARY_PATH` or add current path to `LD_LIBRARY_PATH` with
+        make install
+
+
+5. Add the installation path to `LD_LIBRARY_PATH` with
 
         export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:`pwd`
 
 ## Usage
 
+See the documentation in 
+
+During runtime, the library will try to access the following interfaces:
+
+1. intel powercap, provided by the `intel_powerclamp` kernel module
+2. intel rapl via perf, provided by the `intel_rapl_perf` kernel module
+3. msr and msr-safe, provided by the `msr` and `msr-safe` kernel module
+4. x86-adapt, provided by the `x86_adapt` kernel module (if found during installation)
+5. likwid, provided by `likwid` the `msr`/`msr-safe` kernel module (if found during installation)
+6. APM fam15 APM, provided by the `fam15h_power` kernel module
+
+Option 1-5 are provided for Intel RAPL (Intel since Sandy Bridge), Option 3 and 4 are provided for AMD RAPL (e.g., AMD Zen), option 6 is provided for APM (AMD Family 15h)
+
 ### If anything fails
 
 1. Check whether the libraries can be loaded from the `LD_LIBRARY_PATH`.
 
-2. Check whether you are allowed to read `/dev/cpu/*/msr` or `/dev/x86_adapt/cpu/*`.
-
-3. Write a mail to the author.
+2. Write a mail to the author.
 
 ## Authors
 
 * Robert Schoene (robert.schoene at tu-dresden dot de)
 
-* Michael Werner (michael.werner3 at tu-dresden dot de)
+* Mario Bielert (mario.bielert@tu-dresden.de)

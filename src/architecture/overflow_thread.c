@@ -8,8 +8,18 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 #include "../include/overflow_thread.h"
+
+static bool override_update_rate;
+static long long int override_update_rate_us;
+
+void x86_energy_set_internal_update_thread_rate(long long int time)
+{
+    override_update_rate = true;
+    override_update_rate_us = time;
+}
 
 static struct thread_info* get_thread_info(struct ov_struct* ov, int cpu)
 {
@@ -85,6 +95,14 @@ int x86_energy_overflow_thread_create(struct ov_struct* ov, int cpu, pthread_t* 
                                       double (*read)(x86_energy_single_counter_t),
                                       x86_energy_single_counter_t t, long long usleep_time)
 {
+    if ( override_update_rate )
+    {
+        if ( override_update_rate_us == 0 )
+            return 0 ;
+
+        usleep_time = override_update_rate;
+    }
+
     struct thread_info* info = get_thread_info(ov, cpu);
     if (info == NULL)
     {

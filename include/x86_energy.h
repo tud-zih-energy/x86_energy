@@ -136,6 +136,16 @@ typedef struct x86_energy_mechanism_struct
 x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void);
 
 /**
+ * Hardware energy measurement might have in overflows.
+ * Internal threads will take care of this. If you know what you do, you can override their update
+ * rate with this function. You can also disable threads by setting it to 0.
+ * This will not influence existing threads, so you should call this before calling any
+ * x86_energy_access_source_t.setup(...) and not afterwards!
+ * @param time_in_us the new update rate in us, if 0, the thread(s) will be disabled.
+ */
+void x86_energy_set_internal_update_thread_rate(long long int time_in_us);
+
+/**
  * Will be used by access sources
  */
 typedef void* x86_energy_single_counter_t;
