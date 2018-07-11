@@ -134,6 +134,7 @@ static int read_file_long_list(char* file, long int** result, int* length)
                 return 0;
             case ',':
                 current_ptr = next_ptr + 1;
+                break;
             default:
                 free(*result);
                 *result = NULL;
