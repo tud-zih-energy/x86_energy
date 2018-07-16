@@ -73,6 +73,7 @@ static int read_file_long_list(char* file, long int** result, int* length)
     /*as long as strtol returns something valid, either !=0 or 0 with errno==0 */
     while ( 1 )
     {
+        errno = 0;
         long int read_cpu = strtol( current_ptr, &next_ptr, 10 );
         if ( read_cpu == 0 && errno != 0 )
         {
@@ -110,6 +111,7 @@ static int read_file_long_list(char* file, long int** result, int* length)
         /* range: read another long int */
         case '-':
         {
+            errno = 0;
             current_ptr=next_ptr+1;
             long int end_cpu = strtol( current_ptr, &next_ptr, 10 );
             /* if read error return error */
