@@ -35,7 +35,7 @@ static int read_file_long(char* file, long int* result)
         return 1;
     }
     char* endptr;
-    *result = strtoll(buffer, &endptr, 10);
+    *result = strtol(buffer, &endptr, 10);
     return 0;
 }
 
