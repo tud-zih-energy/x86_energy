@@ -394,14 +394,14 @@ static int process_node(const char* sysfs_path, x86_energy_architecture_node_t* 
         x86_energy_architecture_node_t* package = NULL;
         if (add_package(sys_node, package_id, &package))
         {
-            fprintf(stderr, "Could not add package %d\n",package_id);
+            fprintf(stderr, "Could not add package %li\n",package_id);
             free(cpus);
             return 1;
         }
 
         if (add_node_to_package(package, &node))
         {
-            fprintf(stderr, "Could not add node to package %d\n",package_id);
+            fprintf(stderr, "Could not add node to package %li\n",package_id);
             free(cpus);
             return 1;
         }
