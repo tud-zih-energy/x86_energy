@@ -373,6 +373,7 @@ static int process_node(const char* sysfs_path, x86_energy_architecture_node_t* 
     sprintf(filename, "%s/devices/system/node/node%" PRId32 "/cpulist", sysfs_path, node->id);
     if (read_file_long_list(filename, &cpus, &nr_cpus))
     {
+        fprintf(stderr, "Could not read %s\n",filename);
         return 1;
     }
     for (int current_cpu = 0; current_cpu < nr_cpus; current_cpu++)
@@ -386,18 +387,21 @@ static int process_node(const char* sysfs_path, x86_energy_architecture_node_t* 
                 cpu);
         if (read_file_long(filename, &package_id))
         {
+            fprintf(stderr, "Could not read %s\n",filename);
             free(cpus);
             return 1;
         }
         x86_energy_architecture_node_t* package = NULL;
         if (add_package(sys_node, package_id, &package))
         {
+            fprintf(stderr, "Could not add package %d\n",package_id);
             free(cpus);
             return 1;
         }
 
         if (add_node_to_package(package, &node))
         {
+            fprintf(stderr, "Could not add node to package %d\n",package_id);
             free(cpus);
             return 1;
         }
@@ -412,6 +416,7 @@ static int process_node(const char* sysfs_path, x86_energy_architecture_node_t* 
                 cpu);
         if (read_file_long_list(filename, &shared_cpus_l2, &nr_shared_cpus_l2))
         {
+            fprintf(stderr, "Could not read %s\n",filename);
             free(cpus);
             return 1;
         }
@@ -422,6 +427,7 @@ static int process_node(const char* sysfs_path, x86_energy_architecture_node_t* 
                 cpu);
         if (read_file_long_list(filename, &shared_cpus_l1, &nr_shared_cpus_l1))
         {
+            fprintf(stderr, "Could not read %s\n",filename);
             free(cpus);
             return 1;
         }
@@ -432,6 +438,7 @@ static int process_node(const char* sysfs_path, x86_energy_architecture_node_t* 
             sprintf(buffer, "module %d", (int)node->nr_children);
             if (insert_new_child(node, X86_ENERGY_GRANULARITY_MODULE, node->nr_children, buffer))
             {
+                fprintf(stderr, "Could not insert module child %s\n",buffer);
                 free(shared_cpus_l2);
                 free(cpus);
                 return 1;
@@ -489,12 +496,16 @@ x86_energy_architecture_node_t* x86_energy_init_architecture_nodes(void)
     char hostname[512];
     memset(hostname, 0, sizeof(hostname));
     if (gethostname(hostname, 512))
+    {
+        fprintf(stderr, "Could not get hostname via gethostname()\n");
         return NULL;
+    }
     sys_node->granularity = X86_ENERGY_GRANULARITY_SYSTEM;
     sys_node->name = strdup(hostname);
     if (sys_node->name == NULL)
     {
         free(sys_node);
+        fprintf(stderr, "Could not strdup for sys_node\n");
         return NULL;
     }
     /* Try open sysfs */
@@ -506,6 +517,7 @@ x86_energy_architecture_node_t* x86_energy_init_architecture_nodes(void)
     {
         free(sys_node->name);
         free(sys_node);
+        fprintf(stderr, "Could not get nodes\n");
         return NULL;
     }
     for (int i = 0; i < nr_nodes; i++)
@@ -517,6 +529,7 @@ x86_energy_architecture_node_t* x86_energy_init_architecture_nodes(void)
             {
                 free(nodes[i].name);
             }
+            fprintf(stderr, "Could not process nodes\n");
             free(nodes);
             return NULL;
         }
