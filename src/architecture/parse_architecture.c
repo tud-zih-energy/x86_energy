@@ -75,7 +75,7 @@ static int read_file_long_list(char* file, long int** result, int* length)
     {
         errno = 0;
         long int read_cpu = strtol( current_ptr, &next_ptr, 10 );
-        if ( read_cpu == 0 && errno != 0 )
+        if ( nextptr == current_ptr || errno !=0 )
         {
             fprintf( stderr, "Could not read next CPU: %s\n",current_ptr );
             free(*result);
@@ -115,7 +115,7 @@ static int read_file_long_list(char* file, long int** result, int* length)
             current_ptr=next_ptr+1;
             long int end_cpu = strtol( current_ptr, &next_ptr, 10 );
             /* if read error return error */
-            if ( read_cpu == 0 && errno != 0 )
+            if ( nextptr == current_ptr || errno !=0 )
             {
                 fprintf( stderr, "Could not read next CPU(2): %s\n",current_ptr );
                 free(*result);
