@@ -23,11 +23,15 @@ static int read_file_long(char* file, long int* result)
     char buffer[2048];
     int fd = open(file, O_RDONLY);
     if (fd < 0)
+    {
+        fprintf( stderr, "Could not open %s\n",file );
         return 1;
+    }
     int read_bytes = read(fd, buffer, 2048);
     close(fd);
     if (read_bytes < 0)
     {
+        fprintf( stderr, "Could not read %s\n",file );
         return 1;
     }
     char* endptr;
@@ -40,16 +44,21 @@ static int read_file_long_list(char* file, long int** result, int* length)
     char buffer[2048];
     int fd = open(file, O_RDONLY);
     if (fd < 0)
+    {
+        fprintf( stderr, "Could not open %s\n",file );
         return 1;
+    }
     int read_bytes = read(fd, buffer, 2048);
     close(fd);
     /* would need larger buffer */
     if (read_bytes == 2048)
     {
+        fprintf( stderr, "Could not read %s (insufficient buffer)\n",file );
         return 1;
     }
     if (read_bytes < 0)
     {
+        fprintf( stderr, "Could not read %s\n",file );
         return 1;
     }
     int end_of_text = read_bytes - 1;
@@ -67,6 +76,7 @@ static int read_file_long_list(char* file, long int** result, int* length)
         long int read_cpu = strtol( current_ptr, &next_ptr, 10 );
         if ( read_cpu == 0 && errno != 0 )
         {
+            fprintf( stderr, "Could not read next CPU: %s\n",current_ptr );
             free(*result);
             *result = NULL;
             *length = 0;
@@ -80,6 +90,7 @@ static int read_file_long_list(char* file, long int** result, int* length)
             long int* tmp = realloc(*result, ((*length) + 1) * sizeof(**result));
             if (!tmp)
             {
+                fprintf( stderr, "Could not realloc for CPUs\n" );
                 free(*result);
                 *result = NULL;
                 *length = 0;
@@ -104,6 +115,7 @@ static int read_file_long_list(char* file, long int** result, int* length)
             /* if read error return error */
             if ( read_cpu == 0 && errno != 0 )
             {
+                fprintf( stderr, "Could not read next CPU(2): %s\n",current_ptr );
                 free(*result);
                 *result = NULL;
                 *length = 0;
@@ -114,6 +126,7 @@ static int read_file_long_list(char* file, long int** result, int* length)
 
             if (!tmp)
             {
+                fprintf( stderr, "Could not realloc for CPUs(2)\n" );
                 free(*result);
                 *result = NULL;
                 *length = 0;
@@ -136,6 +149,7 @@ static int read_file_long_list(char* file, long int** result, int* length)
                 current_ptr = next_ptr + 1;
                 break;
             default:
+                fprintf( stderr, "Unexpected cpulist encoding (%s) %s\n",file, next_ptr );
                 free(*result);
                 *result = NULL;
                 *length = 0;
@@ -145,6 +159,7 @@ static int read_file_long_list(char* file, long int** result, int* length)
         }
         /* unexpected character return error */
         default:
+            fprintf( stderr, "Unexpected cpulist encoding(2) (%s) %s\n",file, next_ptr );
             free(*result);
             *result = NULL;
             *length = 0;
@@ -164,7 +179,10 @@ static int get_nodes(char* sysfs, x86_energy_architecture_node_t** nodes, int* n
     int ret = snprintf(fs, 256, "%s/devices/system/node", sysfs);
 
     if (ret < 0 || ret > 256)
+    {
+        fprintf( stderr, "Could not create string for node-fs\n" );
         return 1;
+    }
 
     DIR* d;
     struct dirent* dir;
@@ -181,6 +199,7 @@ static int get_nodes(char* sysfs, x86_energy_architecture_node_t** nodes, int* n
                 char** tmp = realloc(filenames, sizeof(char*) * (nr_filenames + 1));
                 if (tmp == NULL)
                 {
+                    fprintf( stderr, "Could not realloc for get_nodes\n" );
                     for (int i = 0; i < nr_filenames; i++)
                     {
                         free(filenames[i]);
@@ -194,6 +213,7 @@ static int get_nodes(char* sysfs, x86_energy_architecture_node_t** nodes, int* n
                 filenames[nr_filenames] = strdup(dir->d_name);
                 if (filenames[nr_filenames] == NULL)
                 {
+                    fprintf( stderr, "Could not strdup for get_nodes\n" );
                     for (int i = 0; i < nr_filenames; i++)
                     {
                         free(filenames[i]);
@@ -218,6 +238,7 @@ static int get_nodes(char* sysfs, x86_energy_architecture_node_t** nodes, int* n
         x86_energy_architecture_node_t* tmp = realloc(*nodes, (*nr_nodes + 1) * sizeof(**nodes));
         if (tmp == NULL)
         {
+            fprintf( stderr, "Could not realloc(2) for get_nodes\n" );
             for (int i = 0; i < *nr_nodes; i++)
                 free((*nodes)[i].name);
             free(*nodes);
@@ -247,6 +268,7 @@ static int insert_new_child(x86_energy_architecture_node_t* parent_node, int gra
     char* new_name = strdup(name);
     if (new_name == NULL)
     {
+        fprintf( stderr, "Could not strdup for insert_new_child\n" );
         return 1;
     }
     x86_energy_architecture_node_t* tmp =
@@ -254,6 +276,7 @@ static int insert_new_child(x86_energy_architecture_node_t* parent_node, int gra
                 (parent_node->nr_children + 1) * sizeof(x86_energy_architecture_node_t));
     if (tmp == NULL)
     {
+        fprintf( stderr, "Could not realloc for insert_new_child\n" );
         return 1;
     }
     parent_node->children = tmp;
