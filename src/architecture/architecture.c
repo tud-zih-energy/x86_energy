@@ -15,6 +15,8 @@
 #include "../../include/x86_energy.h"
 #include "../include/access.h"
 #include "../include/cpuid.h"
+#include "../include/error.h"
+
 
 static x86_energy_architecture_node_t* arch;
 
@@ -24,14 +26,14 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
 
     if (arch == NULL)
     {
-        fprintf(stderr, "Error while calling x86_energy_init_architecture_nodes\n");
+        x86_energy_append_error_string("Error while calling x86_energy_init_architecture_nodes\n");
         return NULL;
     }
     int num_packages = x86_energy_arch_count(arch, X86_ENERGY_GRANULARITY_SOCKET);
 
     if (num_packages <= 0)
     {
-        fprintf(stderr, "Error while calling x86_energy_arch_count\n");
+        x86_energy_append_error_string("Error while calling x86_energy_arch_count\n");
         return NULL;
     }
 
@@ -182,7 +184,7 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
     }
     else
     {
-        fprintf(stderr, "The calling CPU is Neither Intel, nor AMD\n");
+        x86_energy_set_error_string("The calling CPU is Neither Intel, nor AMD\n");
         return NULL;
     }
     if (is_intel)

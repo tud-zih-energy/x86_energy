@@ -13,6 +13,7 @@
 #include "../include/access.h"
 #include "../include/architecture.h"
 #include "../include/overflow_thread.h"
+#include "../include/error.h"
 
 #define MSR_PKG_ENERGY_STATUS 0x611
 #define MSR_PP0_ENERGY_STATUS 0x639
@@ -46,10 +47,15 @@ static int is_likwid_initialized(long int cpu)
 static int add_likwid_initialize(long int cpu)
 {
     if ( is_likwid_initialized( cpu ) )
+    {
         return 0;
+    }
     long int * tmp = realloc( initialized_cpus, ( initialized_cpus_length +1 ) * sizeof (long int) );
     if ( tmp == NULL )
+    {
+        x86_energy_set_error_string( "Could not realloc likwid initialized CPUs\n" );
         return 1;
+    }
     initialized_cpus = tmp;
     initialized_cpus [ initialized_cpus_length ] = cpu;
     initialized_cpus_length++;
@@ -65,31 +71,41 @@ static int init(void)
     ret = topology_init();
     if (ret)
     {
+        x86_energy_set_error_string( "Error during likwid topology_init\n" );
         return 1;
     }
     ret = HPMinit();
     if (ret)
     {
+        x86_energy_set_error_string( "Error during likwid HPMinit\n" );
         return 1;
     }
 
     ret = power_init(0);
     if (ret == 0)
     {
+        x86_energy_set_error_string( "Error during likwid power_init: RAPL not supported\n" );
         return 1;
     }
 
     ret = add_likwid_initialize( 0 );
     if ( ret )
     {
+        x86_energy_append_error_string( "Error in add_likwid_initialize\n" );
         return 1;
     }
 
     PowerInfo_t info = get_powerInfo();
     if (info == NULL)
+    {
+        x86_energy_set_error_string( "Error during likwid get_powerInfo\n" );
         return 1;
+    }
     if (!info->hasRAPL)
+    {
+        x86_energy_set_error_string( "likwid info->hasRAPL: no RAPL support \n" );
         return 1;
+    }
     return 0;
 }
 
@@ -97,7 +113,10 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
 {
     int cpu = get_test_cpu(X86_ENERGY_GRANULARITY_SOCKET, index);
     if (cpu < 0)
+    {
+        x86_energy_append_error_string( "likwid: could not get CPU for socket%li\n",index );
         return NULL;
+    }
     uint64_t reg;
     PowerType domain;
     switch (counter_type)
@@ -123,6 +142,7 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
         domain = PLATFORM;
         break;
     default:
+        x86_energy_set_error_string( "x86-energy likwid: Invalid call to likwid.c->setup counter_type= %li\n",index );
         return NULL;
     }
     uint32_t reading;
@@ -130,28 +150,37 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     if ( ! is_likwid_initialized( cpu ) )
     {
         if ( HPMaddThread( cpu ) )
+        {
+            x86_energy_set_error_string( "x86-energy likwid: Problem with HPMaddThread for CPU %li\n", cpu );
             return NULL;
+        }
 
-        int ret = add_likwid_initialize( 0 );
+        int ret = add_likwid_initialize( cpu );
         if ( ret )
         {
+            x86_energy_append_error_string( "x86-energy likwid: Problem with add_likwid_initialize for CPU %li\n", cpu );
             return NULL;
         }
     }
 
     if (power_read(cpu, reg, &reading))
     {
+        x86_energy_set_error_string( "x86-energy likwid: Problem with power_read on CPU %li\n", cpu );
         return NULL;
     }
     struct reader_def* def = malloc(sizeof(struct reader_def));
     if (def == NULL)
+    {
+        x86_energy_set_error_string( "x86-energy likwid: Problem with malloc during setup()\n");
         return NULL;
+    }
     def->reg = reg;
     def->cpuId = cpu;
     def->last_reading = reading;
     if (x86_energy_overflow_thread_create(&likwid_ov, cpu, &def->thread, &def->mutex, do_read, def,
                                           30000000))
     {
+        x86_energy_set_error_string( "x86-energy likwid: Error creating a thread for CPU %li\n", cpu );
         free(def);
         return NULL;
     }
@@ -167,6 +196,7 @@ static double do_read(x86_energy_single_counter_t counter)
     pthread_mutex_lock(&def->mutex);
     if (power_read(def->cpuId, def->reg, &reading))
     {
+        x86_energy_set_error_string( "x86-energy likwid: Error calling power_read for CPU %li REG \n", def->cpuId, def->reg );
         return -1.0;
     }
     if (reading < (def->last_reading & 0xFFFFFFFFULL))

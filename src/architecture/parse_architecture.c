@@ -17,6 +17,7 @@
 #include <inttypes.h>
 
 #include "../../include/x86_energy.h"
+#include "../include/error.h"
 
 static int read_file_long(char* file, long int* result)
 {
@@ -24,14 +25,14 @@ static int read_file_long(char* file, long int* result)
     int fd = open(file, O_RDONLY);
     if (fd < 0)
     {
-        fprintf( stderr, "Could not open %s\n",file );
+        x86_energy_set_error_string( "Could not open %s\n",file );
         return 1;
     }
     int read_bytes = read(fd, buffer, 2048);
     close(fd);
     if (read_bytes < 0)
     {
-        fprintf( stderr, "Could not read %s\n",file );
+        x86_energy_set_error_string( "Could not read %s\n",file );
         return 1;
     }
     char* endptr;
@@ -45,7 +46,7 @@ static int read_file_long_list(char* file, long int** result, int* length)
     int fd = open(file, O_RDONLY);
     if (fd < 0)
     {
-        fprintf( stderr, "Could not open %s\n",file );
+        x86_energy_set_error_string( "Could not open %s\n",file );
         return 1;
     }
     int read_bytes = read(fd, buffer, 2048);
@@ -53,12 +54,12 @@ static int read_file_long_list(char* file, long int** result, int* length)
     /* would need larger buffer */
     if (read_bytes == 2048)
     {
-        fprintf( stderr, "Could not read %s (insufficient buffer)\n",file );
+        x86_energy_set_error_string( "Could not read %s (insufficient buffer)\n",file );
         return 1;
     }
     if (read_bytes < 0)
     {
-        fprintf( stderr, "Could not read %s\n",file );
+        x86_energy_set_error_string( "Could not read %s\n",file );
         return 1;
     }
     int end_of_text = read_bytes - 1;
@@ -77,7 +78,7 @@ static int read_file_long_list(char* file, long int** result, int* length)
         long int read_cpu = strtol( current_ptr, &next_ptr, 10 );
         if ( next_ptr == current_ptr || errno !=0 )
         {
-            fprintf( stderr, "Could not read next CPU: %s\n",current_ptr );
+            x86_energy_set_error_string( "Could not read next CPU: %s\n",current_ptr );
             free(*result);
             *result = NULL;
             *length = 0;
@@ -91,7 +92,7 @@ static int read_file_long_list(char* file, long int** result, int* length)
             long int* tmp = realloc(*result, ((*length) + 1) * sizeof(**result));
             if (!tmp)
             {
-                fprintf( stderr, "Could not realloc for CPUs\n" );
+                x86_energy_set_error_string("Could not realloc for CPUs\n" );
                 free(*result);
                 *result = NULL;
                 *length = 0;
@@ -117,7 +118,7 @@ static int read_file_long_list(char* file, long int** result, int* length)
             /* if read error return error */
             if ( next_ptr == current_ptr || errno !=0 )
             {
-                fprintf( stderr, "Could not read next CPU(2): %s\n",current_ptr );
+                x86_energy_set_error_string("Could not read next CPU(2): %s\n",current_ptr );
                 free(*result);
                 *result = NULL;
                 *length = 0;
@@ -128,7 +129,7 @@ static int read_file_long_list(char* file, long int** result, int* length)
 
             if (!tmp)
             {
-                fprintf( stderr, "Could not realloc for CPUs(2)\n" );
+                x86_energy_set_error_string("Could not realloc for CPUs(2)\n" );
                 free(*result);
                 *result = NULL;
                 *length = 0;
@@ -151,7 +152,7 @@ static int read_file_long_list(char* file, long int** result, int* length)
                 current_ptr = next_ptr + 1;
                 break;
             default:
-                fprintf( stderr, "Unexpected cpulist encoding (%s) %s\n",file, next_ptr );
+                x86_energy_set_error_string("Unexpected cpulist encoding (%s) %s\n",file, next_ptr );
                 free(*result);
                 *result = NULL;
                 *length = 0;
@@ -161,7 +162,7 @@ static int read_file_long_list(char* file, long int** result, int* length)
         }
         /* unexpected character return error */
         default:
-            fprintf( stderr, "Unexpected cpulist encoding(2) (%s) %s\n",file, next_ptr );
+            x86_energy_set_error_string("Unexpected cpulist encoding(2) (%s) %s\n",file, next_ptr );
             free(*result);
             *result = NULL;
             *length = 0;
@@ -182,7 +183,7 @@ static int get_nodes(char* sysfs, x86_energy_architecture_node_t** nodes, int* n
 
     if (ret < 0 || ret > 256)
     {
-        fprintf( stderr, "Could not create string for node-fs\n" );
+        x86_energy_set_error_string("Could not create string for node-fs\n" );
         return 1;
     }
 
@@ -201,7 +202,7 @@ static int get_nodes(char* sysfs, x86_energy_architecture_node_t** nodes, int* n
                 char** tmp = realloc(filenames, sizeof(char*) * (nr_filenames + 1));
                 if (tmp == NULL)
                 {
-                    fprintf( stderr, "Could not realloc for get_nodes\n" );
+                    x86_energy_set_error_string("Could not realloc for get_nodes\n" );
                     for (int i = 0; i < nr_filenames; i++)
                     {
                         free(filenames[i]);
@@ -215,7 +216,7 @@ static int get_nodes(char* sysfs, x86_energy_architecture_node_t** nodes, int* n
                 filenames[nr_filenames] = strdup(dir->d_name);
                 if (filenames[nr_filenames] == NULL)
                 {
-                    fprintf( stderr, "Could not strdup for get_nodes\n" );
+                    x86_energy_set_error_string("Could not strdup for get_nodes\n" );
                     for (int i = 0; i < nr_filenames; i++)
                     {
                         free(filenames[i]);
@@ -240,7 +241,7 @@ static int get_nodes(char* sysfs, x86_energy_architecture_node_t** nodes, int* n
         x86_energy_architecture_node_t* tmp = realloc(*nodes, (*nr_nodes + 1) * sizeof(**nodes));
         if (tmp == NULL)
         {
-            fprintf( stderr, "Could not realloc(2) for get_nodes\n" );
+            x86_energy_set_error_string("Could not realloc(2) for get_nodes\n" );
             for (int i = 0; i < *nr_nodes; i++)
                 free((*nodes)[i].name);
             free(*nodes);
@@ -270,7 +271,7 @@ static int insert_new_child(x86_energy_architecture_node_t* parent_node, int gra
     char* new_name = strdup(name);
     if (new_name == NULL)
     {
-        fprintf( stderr, "Could not strdup for insert_new_child\n" );
+        x86_energy_set_error_string("Could not strdup for insert_new_child\n" );
         return 1;
     }
     x86_energy_architecture_node_t* tmp =
@@ -278,7 +279,7 @@ static int insert_new_child(x86_energy_architecture_node_t* parent_node, int gra
                 (parent_node->nr_children + 1) * sizeof(x86_energy_architecture_node_t));
     if (tmp == NULL)
     {
-        fprintf( stderr, "Could not realloc for insert_new_child\n" );
+        x86_energy_set_error_string("Could not realloc for insert_new_child\n" );
         return 1;
     }
     parent_node->children = tmp;
@@ -412,21 +413,21 @@ static int process_node(const char* sysfs_path, x86_energy_architecture_node_t* 
                 cpu);
         if (read_file_long(filename, &package_id))
         {
-            fprintf(stderr, "Could not read %s\n",filename);
+            x86_energy_append_error_string( "Could not read %s\n",filename);
             free(cpus);
             return 1;
         }
         x86_energy_architecture_node_t* package = NULL;
         if (add_package(sys_node, package_id, &package))
         {
-            fprintf(stderr, "Could not add package %li\n",package_id);
+            x86_energy_append_error_string( "Could not add package %li\n",package_id);
             free(cpus);
             return 1;
         }
 
         if (add_node_to_package(package, &node))
         {
-            fprintf(stderr, "Could not add node to package %li\n",package_id);
+            x86_energy_append_error_string( "Could not add node to package %li\n",package_id);
             free(cpus);
             return 1;
         }
@@ -441,7 +442,7 @@ static int process_node(const char* sysfs_path, x86_energy_architecture_node_t* 
                 cpu);
         if (read_file_long_list(filename, &shared_cpus_l2, &nr_shared_cpus_l2))
         {
-            fprintf(stderr, "Could not read %s\n",filename);
+            x86_energy_append_error_string( "Could not read %s\n",filename);
             free(cpus);
             return 1;
         }
@@ -452,7 +453,7 @@ static int process_node(const char* sysfs_path, x86_energy_architecture_node_t* 
                 cpu);
         if (read_file_long_list(filename, &shared_cpus_l1, &nr_shared_cpus_l1))
         {
-            fprintf(stderr, "Could not read %s\n",filename);
+            x86_energy_append_error_string( "Could not read %s\n",filename);
             free(cpus);
             return 1;
         }
@@ -463,7 +464,7 @@ static int process_node(const char* sysfs_path, x86_energy_architecture_node_t* 
             sprintf(buffer, "module %d", (int)node->nr_children);
             if (insert_new_child(node, X86_ENERGY_GRANULARITY_MODULE, node->nr_children, buffer))
             {
-                fprintf(stderr, "Could not insert module child %s\n",buffer);
+                x86_energy_append_error_string( "Could not insert module child %s\n",buffer);
                 free(shared_cpus_l2);
                 free(cpus);
                 return 1;
@@ -522,7 +523,7 @@ x86_energy_architecture_node_t* x86_energy_init_architecture_nodes(void)
     memset(hostname, 0, sizeof(hostname));
     if (gethostname(hostname, 512))
     {
-        fprintf(stderr, "Could not get hostname via gethostname()\n");
+        x86_energy_set_error_string( "Could not get hostname via gethostname()\n");
         return NULL;
     }
     sys_node->granularity = X86_ENERGY_GRANULARITY_SYSTEM;
@@ -530,7 +531,7 @@ x86_energy_architecture_node_t* x86_energy_init_architecture_nodes(void)
     if (sys_node->name == NULL)
     {
         free(sys_node);
-        fprintf(stderr, "Could not strdup for sys_node\n");
+        x86_energy_set_error_string( "Could not strdup for sys_node\n");
         return NULL;
     }
     /* Try open sysfs */
@@ -542,7 +543,7 @@ x86_energy_architecture_node_t* x86_energy_init_architecture_nodes(void)
     {
         free(sys_node->name);
         free(sys_node);
-        fprintf(stderr, "Could not get nodes\n");
+        x86_energy_append_error_string( "Could not get nodes\n");
         return NULL;
     }
     for (int i = 0; i < nr_nodes; i++)
@@ -554,7 +555,7 @@ x86_energy_architecture_node_t* x86_energy_init_architecture_nodes(void)
             {
                 free(nodes[i].name);
             }
-            fprintf(stderr, "Could not process nodes\n");
+            x86_energy_append_error_string( "Could not process nodes\n");
             free(nodes);
             return NULL;
         }
