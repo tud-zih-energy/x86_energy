@@ -135,6 +135,8 @@ typedef struct x86_energy_mechanism_struct
  */
 x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void);
 
+char * x86_energy_error_string( void );
+
 /**
  * Hardware energy measurement might have in overflows.
  * Internal threads will take care of this. If you know what you do, you can override their update
