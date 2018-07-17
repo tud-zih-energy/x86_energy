@@ -48,12 +48,18 @@ static int init(void)
     int ret = x86_adapt_init();
 
     if (ret)
+    {
+        x86_energy_set_error_string("Error while calling x86_adapt_init %d\n",ret);
         return 1;
+    }
 
     /* search for core freq parameters */
     int xa_index = x86_adapt_lookup_ci_name(X86_ADAPT_DIE, x86a_names[0]);
     if (xa_index < 0)
+    {
+        x86_energy_set_error_string("Error while calling x86_adapt_lookup_ci_name %s %d\n", x86a_names[0], ret);
         return 1;
+    }
     return 0;
 }
 
@@ -90,27 +96,41 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     case X86_ENERGY_COUNTER_GPU:   /* fall-through */
         break;
     default:
+        x86_energy_set_error_string("Invalid call to x86_adapt.c->setup counter_type= %d\n", counter_type );
         return NULL;
     }
 
     int cpu = get_test_cpu(X86_ENERGY_GRANULARITY_SOCKET, index);
     if (cpu < 0)
+    {
+        x86_energy_append_error_string("Error calling get_test_cpu for socket %d\n", index );
         return NULL;
+    }
     char* name = x86a_names[counter_type];
     if (name == NULL)
+    {
+        x86_energy_set_error_string("x86_adapt.c->setup counter_type %d not supported\n", index );
         return NULL;
+    }
 
     int xa_index = x86_adapt_lookup_ci_name(X86_ADAPT_DIE, name);
     if (xa_index < 0)
+    {
+        x86_energy_set_error_string("x86_adapt.c->setup Error calling x86_adapt_lookup_ci_name for %s %d\n", name, xa_index );
         return NULL;
+    }
 
     int fd = x86_adapt_get_device_ro(X86_ADAPT_DIE, index);
     if (fd <= 0)
+    {
+        x86_energy_set_error_string("x86_adapt.c->setup Error calling x86_adapt_get_device_ro for package %d %d\n", index, fd );
         return NULL;
+    }
 
     int xa_index_unit = x86_adapt_lookup_ci_name(X86_ADAPT_DIE, POWER_UNIT_REGISTER);
     if (xa_index_unit < 0)
     {
+        x86_energy_set_error_string("x86_adapt.c->setup Error calling x86_adapt_lookup_ci_name for power unit %d\n", name, xa_index );
         close(fd);
         x86_adapt_put_device(X86_ADAPT_DIE, index);
         return NULL;
@@ -139,6 +159,7 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     uint64_t current_setting;
     if (x86_adapt_get_setting(fd, xa_index, &current_setting) != 8)
     {
+        x86_energy_set_error_string("x86_adapt.c->setup Error calling x86_adapt_get_setting for packaged %d\n", index );
         close(fd);
         x86_adapt_put_device(X86_ADAPT_DIE, index);
         return NULL;
@@ -154,6 +175,7 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     if (x86_energy_overflow_thread_create(&x86a_ov, cpu, &def->thread, &def->mutex, do_read, def,
                                           30000000))
     {
+        x86_energy_set_error_string("x86_adapt.c->setup Error creating a thread for cpu %d\n", cpu);
         free(def);
         x86_adapt_put_device(X86_ADAPT_DIE, index);
         return NULL;
