@@ -26,6 +26,7 @@ add_library(x86_energy SHARED
     src/access/procfs.c
     src/access/sysfs_fam15.c
     src/access/sysfs.c
+    src/error/error.c
 )
 
 add_library(x86_energy-static STATIC
@@ -39,6 +40,7 @@ add_library(x86_energy-static STATIC
     src/access/procfs.c
     src/access/sysfs_fam15.c
     src/access/sysfs.c
+    src/error/error.c
 )
 
 target_link_libraries(x86_energy PUBLIC Threads::Threads m)
