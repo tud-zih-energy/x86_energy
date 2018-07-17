@@ -23,71 +23,150 @@ static int read_file_long(char* file, long int* result)
     char buffer[2048];
     int fd = open(file, O_RDONLY);
     if (fd < 0)
+    {
+        fprintf( stderr, "Could not open %s\n",file );
         return 1;
+    }
     int read_bytes = read(fd, buffer, 2048);
     close(fd);
     if (read_bytes < 0)
     {
+        fprintf( stderr, "Could not read %s\n",file );
         return 1;
     }
     char* endptr;
-    *result = strtoll(buffer, &endptr, 10);
+    *result = strtol(buffer, &endptr, 10);
     return 0;
 }
 
-static int read_file_long_mask(char* file, long int** result, int* length)
+static int read_file_long_list(char* file, long int** result, int* length)
 {
     char buffer[2048];
     int fd = open(file, O_RDONLY);
     if (fd < 0)
+    {
+        fprintf( stderr, "Could not open %s\n",file );
         return 1;
+    }
     int read_bytes = read(fd, buffer, 2048);
     close(fd);
     /* would need larger buffer */
     if (read_bytes == 2048)
     {
+        fprintf( stderr, "Could not read %s (insufficient buffer)\n",file );
         return 1;
     }
     if (read_bytes < 0)
     {
+        fprintf( stderr, "Could not read %s\n",file );
         return 1;
     }
     int end_of_text = read_bytes - 1;
     *result = NULL;
     *length = 0;
     long int nr_processed = 0;
-    for (int position_in_text = end_of_text; position_in_text >= 0; position_in_text--)
+
+    char* current_ptr = buffer;
+    char* next_ptr = NULL;
+
+
+    /*as long as strtol returns something valid, either !=0 or 0 with errno==0 */
+    while ( 1 )
     {
-        /* end string early */
-        buffer[position_in_text + 1] = '\0';
-        /* now read that ull */
-        char* endptr;
-        long int chunk = strtol(&buffer[position_in_text], &endptr, 16);
-
-        /* sometimes there are commas */
-        if (endptr == &buffer[position_in_text])
+        errno = 0;
+        long int read_cpu = strtol( current_ptr, &next_ptr, 10 );
+        if ( next_ptr == current_ptr || errno !=0 )
         {
-            continue;
+            fprintf( stderr, "Could not read next CPU: %s\n",current_ptr );
+            free(*result);
+            *result = NULL;
+            *length = 0;
+            return 1;
         }
-
-        for (int i = 0; i < 4; i++)
+        switch ( *next_ptr )
         {
-            if ((chunk >> (3 - i) & 1))
+        /* add cpu */
+        case ',':
+        {
+            long int* tmp = realloc(*result, ((*length) + 1) * sizeof(**result));
+            if (!tmp)
             {
-                long int* tmp = realloc(*result, ((*length) + 1) * sizeof(**result));
-                if (!tmp)
-                {
-                    free(*result);
-                    *result = NULL;
-                    *length = 0;
-                    return 1;
-                }
-                *result = tmp;
-                tmp[*length] = nr_processed * 4 + i;
-                (*length)++;
+                fprintf( stderr, "Could not realloc for CPUs\n" );
+                free(*result);
+                *result = NULL;
+                *length = 0;
+                return 1;
             }
+            *result = tmp;
+            tmp[*length] = read_cpu;
+            (*length)++;
+            /*continue at ',' +1 */
+            current_ptr = next_ptr + 1;
+            break;
         }
-        nr_processed++;
+        /* just return on end */
+        case '\n': /* fall-through */
+        case '\0':
+            return 0;
+        /* range: read another long int */
+        case '-':
+        {
+            errno = 0;
+            current_ptr=next_ptr+1;
+            long int end_cpu = strtol( current_ptr, &next_ptr, 10 );
+            /* if read error return error */
+            if ( next_ptr == current_ptr || errno !=0 )
+            {
+                fprintf( stderr, "Could not read next CPU(2): %s\n",current_ptr );
+                free(*result);
+                *result = NULL;
+                *length = 0;
+                return 1;
+            }
+            /* if no read error, add range: realloc, then fill */
+            long int* tmp = realloc(*result, ((*length) + ( end_cpu - read_cpu + 1)) * sizeof(**result));
+
+            if (!tmp)
+            {
+                fprintf( stderr, "Could not realloc for CPUs(2)\n" );
+                free(*result);
+                *result = NULL;
+                *length = 0;
+                return 1;
+            }
+
+            for ( long int i = read_cpu; i <= end_cpu ; i ++ )
+                tmp[ *length + ( i - read_cpu ) ] = read_cpu ;
+
+            *result = tmp;
+            (*length) += end_cpu - read_cpu + 1;
+
+            /*next character should be ',' or '\0' */
+            switch ( *next_ptr )
+            {
+            case '\n': /* fall-through */
+            case '\0':
+                return 0;
+            case ',':
+                current_ptr = next_ptr + 1;
+                break;
+            default:
+                fprintf( stderr, "Unexpected cpulist encoding (%s) %s\n",file, next_ptr );
+                free(*result);
+                *result = NULL;
+                *length = 0;
+                return 1;
+            }
+            break;
+        }
+        /* unexpected character return error */
+        default:
+            fprintf( stderr, "Unexpected cpulist encoding(2) (%s) %s\n",file, next_ptr );
+            free(*result);
+            *result = NULL;
+            *length = 0;
+            return 1;
+        }
     }
     return 0;
 }
@@ -102,7 +181,10 @@ static int get_nodes(char* sysfs, x86_energy_architecture_node_t** nodes, int* n
     int ret = snprintf(fs, 256, "%s/devices/system/node", sysfs);
 
     if (ret < 0 || ret > 256)
+    {
+        fprintf( stderr, "Could not create string for node-fs\n" );
         return 1;
+    }
 
     DIR* d;
     struct dirent* dir;
@@ -119,6 +201,7 @@ static int get_nodes(char* sysfs, x86_energy_architecture_node_t** nodes, int* n
                 char** tmp = realloc(filenames, sizeof(char*) * (nr_filenames + 1));
                 if (tmp == NULL)
                 {
+                    fprintf( stderr, "Could not realloc for get_nodes\n" );
                     for (int i = 0; i < nr_filenames; i++)
                     {
                         free(filenames[i]);
@@ -132,6 +215,7 @@ static int get_nodes(char* sysfs, x86_energy_architecture_node_t** nodes, int* n
                 filenames[nr_filenames] = strdup(dir->d_name);
                 if (filenames[nr_filenames] == NULL)
                 {
+                    fprintf( stderr, "Could not strdup for get_nodes\n" );
                     for (int i = 0; i < nr_filenames; i++)
                     {
                         free(filenames[i]);
@@ -156,6 +240,7 @@ static int get_nodes(char* sysfs, x86_energy_architecture_node_t** nodes, int* n
         x86_energy_architecture_node_t* tmp = realloc(*nodes, (*nr_nodes + 1) * sizeof(**nodes));
         if (tmp == NULL)
         {
+            fprintf( stderr, "Could not realloc(2) for get_nodes\n" );
             for (int i = 0; i < *nr_nodes; i++)
                 free((*nodes)[i].name);
             free(*nodes);
@@ -185,6 +270,7 @@ static int insert_new_child(x86_energy_architecture_node_t* parent_node, int gra
     char* new_name = strdup(name);
     if (new_name == NULL)
     {
+        fprintf( stderr, "Could not strdup for insert_new_child\n" );
         return 1;
     }
     x86_energy_architecture_node_t* tmp =
@@ -192,6 +278,7 @@ static int insert_new_child(x86_energy_architecture_node_t* parent_node, int gra
                 (parent_node->nr_children + 1) * sizeof(x86_energy_architecture_node_t));
     if (tmp == NULL)
     {
+        fprintf( stderr, "Could not realloc for insert_new_child\n" );
         return 1;
     }
     parent_node->children = tmp;
@@ -308,9 +395,10 @@ static int process_node(const char* sysfs_path, x86_energy_architecture_node_t* 
     long int* cpus;
     int nr_cpus;
     char filename[2048];
-    sprintf(filename, "%s/devices/system/node/node%" PRId32 "/cpumap", sysfs_path, node->id);
-    if (read_file_long_mask(filename, &cpus, &nr_cpus))
+    sprintf(filename, "%s/devices/system/node/node%" PRId32 "/cpulist", sysfs_path, node->id);
+    if (read_file_long_list(filename, &cpus, &nr_cpus))
     {
+        fprintf(stderr, "Could not read %s\n",filename);
         return 1;
     }
     for (int current_cpu = 0; current_cpu < nr_cpus; current_cpu++)
@@ -324,18 +412,21 @@ static int process_node(const char* sysfs_path, x86_energy_architecture_node_t* 
                 cpu);
         if (read_file_long(filename, &package_id))
         {
+            fprintf(stderr, "Could not read %s\n",filename);
             free(cpus);
             return 1;
         }
         x86_energy_architecture_node_t* package = NULL;
         if (add_package(sys_node, package_id, &package))
         {
+            fprintf(stderr, "Could not add package %li\n",package_id);
             free(cpus);
             return 1;
         }
 
         if (add_node_to_package(package, &node))
         {
+            fprintf(stderr, "Could not add node to package %li\n",package_id);
             free(cpus);
             return 1;
         }
@@ -346,20 +437,22 @@ static int process_node(const char* sysfs_path, x86_energy_architecture_node_t* 
 
         int nr_shared_cpus_l2;
         long int* shared_cpus_l2;
-        sprintf(filename, "%s/devices/system/cpu/cpu%ld/cache/index2/shared_cpu_map", sysfs_path,
+        sprintf(filename, "%s/devices/system/cpu/cpu%ld/cache/index2/shared_cpu_list", sysfs_path,
                 cpu);
-        if (read_file_long_mask(filename, &shared_cpus_l2, &nr_shared_cpus_l2))
+        if (read_file_long_list(filename, &shared_cpus_l2, &nr_shared_cpus_l2))
         {
+            fprintf(stderr, "Could not read %s\n",filename);
             free(cpus);
             return 1;
         }
 
         int nr_shared_cpus_l1;
         long int* shared_cpus_l1;
-        sprintf(filename, "%s/devices/system/cpu/cpu%ld/cache/index1/shared_cpu_map", sysfs_path,
+        sprintf(filename, "%s/devices/system/cpu/cpu%ld/cache/index1/shared_cpu_list", sysfs_path,
                 cpu);
-        if (read_file_long_mask(filename, &shared_cpus_l1, &nr_shared_cpus_l1))
+        if (read_file_long_list(filename, &shared_cpus_l1, &nr_shared_cpus_l1))
         {
+            fprintf(stderr, "Could not read %s\n",filename);
             free(cpus);
             return 1;
         }
@@ -370,6 +463,7 @@ static int process_node(const char* sysfs_path, x86_energy_architecture_node_t* 
             sprintf(buffer, "module %d", (int)node->nr_children);
             if (insert_new_child(node, X86_ENERGY_GRANULARITY_MODULE, node->nr_children, buffer))
             {
+                fprintf(stderr, "Could not insert module child %s\n",buffer);
                 free(shared_cpus_l2);
                 free(cpus);
                 return 1;
@@ -427,12 +521,16 @@ x86_energy_architecture_node_t* x86_energy_init_architecture_nodes(void)
     char hostname[512];
     memset(hostname, 0, sizeof(hostname));
     if (gethostname(hostname, 512))
+    {
+        fprintf(stderr, "Could not get hostname via gethostname()\n");
         return NULL;
+    }
     sys_node->granularity = X86_ENERGY_GRANULARITY_SYSTEM;
     sys_node->name = strdup(hostname);
     if (sys_node->name == NULL)
     {
         free(sys_node);
+        fprintf(stderr, "Could not strdup for sys_node\n");
         return NULL;
     }
     /* Try open sysfs */
@@ -444,6 +542,7 @@ x86_energy_architecture_node_t* x86_energy_init_architecture_nodes(void)
     {
         free(sys_node->name);
         free(sys_node);
+        fprintf(stderr, "Could not get nodes\n");
         return NULL;
     }
     for (int i = 0; i < nr_nodes; i++)
@@ -455,6 +554,7 @@ x86_energy_architecture_node_t* x86_energy_init_architecture_nodes(void)
             {
                 free(nodes[i].name);
             }
+            fprintf(stderr, "Could not process nodes\n");
             free(nodes);
             return NULL;
         }

@@ -86,12 +86,13 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
         {
             int package;
             int dummy;
+            // first we go through all
+            // /sys/class/powercap/intel-rapl\:<N> and /sys/class/powercap/intel-rapl\:<N>:<M>
             int read_items = sscanf(namelist[n]->d_name, "intel-rapl:%d:%d", &package, &dummy);
             if (read_items <= 0)
                 continue;
-            if (package != given_package)
-                continue;
-            sprintf(file_name_buffer, "%s/%s/name", RAPL_PATH, namelist[n]->d_name);
+            // now we verify that we are using the correct package in /sys/class/powercap/intel-rapl\:<N>/name
+            sprintf(file_name_buffer, "%s/intel-rapl:%d/name", RAPL_PATH, package);
             FILE* fp = fopen(file_name_buffer, "r");
             if (fp == NULL)
                 break;
@@ -105,9 +106,35 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
             }
             // remove \n
             buffer[strlen(buffer) - 1] = '\0';
+            // the content should be package-N
+            if (strncmp(buffer, "package", 7) != 0)
+                break;
+            // try to read real package
+            package = strtol(&buffer[8],NULL,10);
+            if ( package == 0 && errno != 0 )
+                break;
+            // not the package we were looking for?
+            if (package != given_package)
+                continue;
+            sprintf(file_name_buffer, "%s/%s/name", RAPL_PATH, namelist[n]->d_name);
+            fp = fopen(file_name_buffer, "r");
+            if (fp == NULL)
+                break;
+
+            buffer = NULL;
+            len = 0;
+            read = getline(&buffer, &len, fp);
+            fclose(fp);
+            if (read <= 0)
+            {
+                break;
+            }
+            // remove \n
+            buffer[strlen(buffer) - 1] = '\0';
             // packages have indices
             if (strncmp(buffer, "package", 7) == 0)
                 buffer[7] = '\0';
+
             if (strcmp(name, buffer) == 0)
             {
                 sprintf(file_name_buffer, RAPL_PATH "/%s/energy_uj", namelist[n]->d_name);

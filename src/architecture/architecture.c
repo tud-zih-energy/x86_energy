@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "../include/architecture.h"
 
@@ -22,11 +23,17 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
     arch = x86_energy_init_architecture_nodes();
 
     if (arch == NULL)
+    {
+        fprintf(stderr, "Error while calling x86_energy_init_architecture_nodes\n");
         return NULL;
+    }
     int num_packages = x86_energy_arch_count(arch, X86_ENERGY_GRANULARITY_SOCKET);
 
     if (num_packages <= 0)
+    {
+        fprintf(stderr, "Error while calling x86_energy_arch_count\n");
         return NULL;
+    }
 
     bool is_intel = false, is_amd = false, is_amd_rapl = false;
     bool supported[X86_ENERGY_COUNTER_SIZE];
@@ -174,7 +181,10 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
         }
     }
     else
+    {
+        fprintf(stderr, "The calling CPU is Neither Intel, nor AMD\n");
         return NULL;
+    }
     if (is_intel)
     {
         x86_energy_mechanisms_t* t = malloc(sizeof(x86_energy_mechanisms_t));
