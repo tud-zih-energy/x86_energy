@@ -283,6 +283,8 @@ find_node_internal(x86_energy_architecture_node_t* current,
         if (found != NULL)
             return found;
     }
+
+    x86_energy_set_error_string("Error in %s:%d: Could not find any children of node %s having a granularity of %d\n", __FILE__, __LINE__, current->name, given_granularity);
     return NULL;
 }
 
@@ -293,7 +295,10 @@ long get_test_cpu(enum x86_energy_granularity given_granularity, unsigned long i
     x86_energy_architecture_node_t* sub_node = find_node_internal(current, given_granularity, id);
 
     if (sub_node == NULL)
+    {
+    	x86_energy_append_error_string("Error in %s:%d: search for node with granularity value %d returned NULL\n", __FILE__, __LINE__, given_granularity);
         return -1;
+    }
 
     while (sub_node->granularity != X86_ENERGY_GRANULARITY_THREAD)
         sub_node = sub_node->children;
