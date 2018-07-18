@@ -22,6 +22,7 @@
 
 #include "../include/access.h"
 #include "../include/architecture.h"
+#include "../include/error.h"
 
 static char* strings_for_events[X86_ENERGY_COUNTER_SIZE] = {
     "pkg", "cores", "ram", "gpu", "sys",
@@ -44,21 +45,32 @@ static int get_event_id(char* suffix)
     int ret = snprintf(file_name_buffer, 1024,
                        "/sys/bus/event_source/devices/power/events/energy-%s", suffix);
     if (ret < 0 || ret == 1024)
+    {
+    	if(ret < 0) x86_energy_set_error_string("Error in %s:%d: output error while trying to assemble sysfs-path-string", __FILE__, __LINE__);
+    	else        x86_energy_set_error_string("Error in %s:%d: specified suffix was too long", __FILE__, __LINE__);
         return -1;
+    }
     FILE* fp = fopen(file_name_buffer, "r");
     if (fp == NULL)
+    {
+    	x86_energy_set_error_string("Error in %s:%d: could not obtain file pointer to \"%s\"" , __FILE__, __LINE__, file_name_buffer);
         return -1;
+    }
     char* buffer = NULL;
     size_t len = 0;
     int read = getline(&buffer, &len, fp);
     fclose(fp);
     if (read <= 0)
     {
+    	x86_energy_set_error_string("Error in %s:%d: could not read any bytes from \"%s\"", __FILE__, __LINE__, file_name_buffer);
         return -1;
     }
     unsigned int result;
     if (sscanf(buffer, "event=0x%xi", &result) != 1)
+    {
+    	x86_energy_set_error_string("Error in %s:%d: invalid content in file \"%s\", does not conform with mask event=0xFFFF", __FILE__, __LINE__, file_name_buffer);
         return 1;
+    }
     return result;
 }
 /* returns < 0 as failure */
@@ -68,14 +80,22 @@ static double get_event_unit(char* suffix)
     int ret = snprintf(file_name_buffer, 1024,
                        "/sys/bus/event_source/devices/power/events/energy-%s.scale", suffix);
     if (ret < 0 || ret == 1024)
+    {
+    	if(ret < 0) x86_energy_set_error_string("Error in %s:%d: output error while trying to assemble sysfs-path-string", __FILE__, __LINE__);
+    	else        x86_energy_set_error_string("Error in %s:%d: specified suffix was too long", __FILE__, __LINE__);
         return -1;
+    }
     FILE* fp = fopen(file_name_buffer, "r");
     if (fp == NULL)
+    {
+    	x86_energy_set_error_string("Error in %s:%d: could not obtain file pointer to \"%s\"" , __FILE__, __LINE__, file_name_buffer);
         return -1;
+    }
     double scale;
     if (fscanf(fp, "%le", &scale) != 1)
     {
         fclose(fp);
+        x86_energy_set_error_string("Error in %s:%d: invalid content in file \"%s\", not a floating point number", __FILE__, __LINE__, file_name_buffer);
         return -1;
     }
     fclose(fp);
@@ -86,15 +106,22 @@ static int init(void)
 {
     /* try to find event source and pkg event, which should be there always */
     if (get_event_id("pkg") < 0)
+    {
+    	x86_energy_append_error_string("Error in %s:%d: event id \"pkg\" not accessible", __FILE__, __LINE__);
         return 1;
+    }
 
     /* try to find power perf type */
     FILE* fp = fopen("/sys/bus/event_source/devices/power/type", "r");
     if (fp == NULL)
+    {
+    	x86_energy_set_error_string("Error in %s:%d: could not obtain file pointer to file \"/sys/bus/event_source/devices/power/type\"", __FILE__, __LINE__);
         return 1;
+    }
     if (fscanf(fp, "%d", &type) != 1)
     {
         fclose(fp);
+        x86_energy_set_error_string("Error in %s:%d: file \"/sys/bus/event_source/devices/power/type\" does not contain a single number", __FILE__, __LINE__);
         return 1;
     }
     fclose(fp);
@@ -106,14 +133,23 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     int cpu = get_test_cpu(X86_ENERGY_GRANULARITY_SOCKET, index);
 
     if (counter_type == X86_ENERGY_COUNTER_SIZE)
+    {
+    	x86_energy_set_error_string("Error in %s:%d: can't handle counter type counter size", __FILE__, __LINE__);
         return NULL;
+    }
     char* suffix = strings_for_events[counter_type];
     int event_id = get_event_id(suffix);
     if (event_id < 0)
+    {
+    	x86_energy_set_error_string("Error in %s:%d: could not obtain event_id for event suffix \"%s\"", __FILE__, __LINE__, suffix);
         return NULL;
+    }
     double unit = get_event_unit(suffix);
     if (unit < 0.0)
+    {
+    	x86_energy_set_error_string("Error in %s:%d: could not read unit for event suffix \"%s\"", __FILE__, __LINE__, suffix);
         return NULL;
+    }
 
     struct perf_event_attr attr;
     memset(&attr, 0, sizeof(struct perf_event_attr));
@@ -121,15 +157,22 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     attr.config = event_id;
     int fd = syscall(__NR_perf_event_open, &attr, -1, cpu, -1, 0);
     if (fd <= 0)
+    {
+    	x86_energy_set_error_string("Error in %s:%d: could not perform syscall to perf_event_open (pid=-1, cpu=%d)", __FILE__, __LINE__, cpu);
         return NULL;
+    }
 
     struct reader_def* def = malloc(sizeof(struct reader_def));
     if (def == NULL)
+    {
+    	x86_energy_set_error_string("Error in %s:%d: could not allocate %d bytes of memory", __FILE__, __LINE__, sizeof(struct reader_def));
         return NULL;
+    }
     uint64_t reading;
     if (read(fd, &reading, 8) != 8)
     {
         close(fd);
+        x86_energy_set_error_string("Error in %s:%d: could not read the first 8 bytes from perf_event_open stream", __FILE__, __LINE__);
         return NULL;
     }
     def->fd = fd;
@@ -144,6 +187,7 @@ static double do_read(x86_energy_single_counter_t counter)
     struct reader_def* def = (struct reader_def*)counter;
     if (read(def->fd, &reading, 8) != 8)
     {
+    	x86_energy_set_error_string("Error in %s:%d: could not read 8 bytes", __FILE__, __LINE__);
         return -1.0;
     }
     return reading * def->unit;

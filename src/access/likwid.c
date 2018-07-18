@@ -197,6 +197,7 @@ static double do_read(x86_energy_single_counter_t counter)
     if (power_read(def->cpuId, def->reg, &reading))
     {
         x86_energy_set_error_string( "x86-energy likwid: Error calling power_read for CPU %li REG \n", def->cpuId, def->reg );
+        pthread_mutex_unlock(&def->mutex);
         return -1.0;
     }
     if (reading < (def->last_reading & 0xFFFFFFFFULL))
