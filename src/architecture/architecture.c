@@ -267,6 +267,9 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
         return t;
     }
 
+    eax = 1;
+    cpuid(&eax, &ebx, &ecx, &edx);
+    x86_energy_set_error_string("Error in %s:%d: could not determine capabilities of cpu, it is not supported. CPU FAMILY %x, EXT FAMILY %x, MODEL %x, EXT MODEL %x\n", __FILE__, __LINE__, FAMILY(eax), EXT_FAMILY(eax), MODEL(eax), EXT_MODEL(eax));
     return NULL;
 }
 
