@@ -33,6 +33,7 @@ int main()
                 if (t == NULL)
                 {
                     printf("Could not add counter %d for package\n", j);
+                    printf("%s", x86_energy_error_string());
                     continue;
                 }
                 double value = a->avail_sources[i].read(t);

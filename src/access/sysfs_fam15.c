@@ -5,6 +5,12 @@
  *      Author: rschoene
  */
 
+/* experimental */
+#define S(x) #x
+#define S_(x) S(x)
+#define S__LINE__ S_(__LINE__)
+
+
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -111,7 +117,7 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
             final_fp = fopen(file_name_buffer, "r");
             if (final_fp == NULL)
             {
-            	x86_energy_set_error_string("Error in %s:%d: could not get a file pointer to \"%s\"\n", __FILE__, __LINE__, file_name_buffer);
+            	x86_energy_set_error_string("Error in "__FILE__":" S__LINE__ ": could not get a file pointer to \"%s\"\n", file_name_buffer);
                 return NULL;
             }
         }

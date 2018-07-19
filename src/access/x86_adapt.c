@@ -17,6 +17,7 @@
 #include "../include/architecture.h"
 #include "../include/cpuid.h"
 #include "../include/overflow_thread.h"
+#include "../include/error.h"
 
 #define BUFFER_SIZE 4096
 #define POWER_UNIT_REGISTER "Intel_RAPL_Power_Unit"

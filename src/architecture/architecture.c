@@ -61,13 +61,74 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
     buffer[11] = (ecx >> 24) & 0xFF;
     buffer[12] = '\0';
 
+
+
+    int cpu_base_family = 0,
+    	cpu_ext_family  = 0,
+		cpu_base_model  = 0,
+		cpu_ext_model   = 0,
+		cpu_family      = 0,
+		cpu_model       = 0;
+
+    if(strcmp(buffer, "GenuineIntel") == 0 || strcmp(buffer, "AuthenticAMD") == 0)
+    {
+    	eax = 1;
+    	cpuid(&eax, &ebx, &ecx, &edx);
+
+        cpu_base_family = FAMILY(eax);
+        cpu_ext_family  = EXT_FAMILY(eax);
+        cpu_base_model  = MODEL(eax);
+        cpu_ext_model   = EXT_MODEL(eax);
+
+        /* Intel and AMD have suggested applications to display the family
+         * of a CPU as the sum of the "Family" and the "Extended Family"
+         * fields shown above, and the model as the sum of the "Model" and
+         * the 4-bit left-shifted "Extended Model" fields.[5]
+         *
+         * If "Family" is different than 6 or 15, only the "Family" and "Model"
+         * fields should be used while the "Extended Family" and
+         * "Extended Model" bits are reserved.
+         *
+         * If "Family" is set to 15, then "Extended Family" and the 4-bit
+         * left-shifted "Extended Model" should be added to the respective
+         * base values, and if "Family" is set to 6, then only the 4-bit
+         * left-shifted "Extended Model" should be added to "Model".[6][7]
+         *
+         * [5] http://download.intel.com/design/processor/applnots/24161832.pdf
+         * [6] http://support.amd.com/us/Embedded_TechDocs/25481.pdf
+         * [7] http://www.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-software-developer-vol-2a-manual.pdf
+         *
+         * Source: https://en.wikipedia.org/wiki/CPUID
+         */
+
+        if(6 == cpu_base_family)
+        {
+            cpu_model = (cpu_ext_model << 4) + cpu_base_model;
+            cpu_family = cpu_base_family;
+        } else if(15 == cpu_base_family)
+        {
+            cpu_model  = (cpu_ext_model  << 4) + cpu_base_model;
+            cpu_family = cpu_ext_family + cpu_base_family;
+        } else
+        {
+            cpu_model  = cpu_base_model;
+            cpu_family = cpu_base_family;
+        }
+
+    } else
+    {
+        x86_energy_set_error_string("Error in %s:%d: the calling CPU is neither Intel, nor AMD\n", __FILE__, __LINE__);
+        return NULL;
+    }
+
     if (strcmp(buffer, "GenuineIntel") == 0)
     {
-        eax = 1;
-        cpuid(&eax, &ebx, &ecx, &edx);
-        if (FAMILY(eax) != 6)
+        if (cpu_family != 6)
+        {
+        	x86_energy_set_error_string("Error in %s:%d: Not a supported Intel processor family (family 0x%x, model 0x%x)\n", cpu_family, cpu_model);
             return 0;
-        switch ((EXT_MODEL(eax) << 4) + MODEL(eax))
+        }
+        switch (cpu_model)
         {
         /* Sandy Bridge */
         case 0x2a:
@@ -162,31 +223,28 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
             break;
         /* none of the above */
         default:
+        	x86_energy_set_error_string("Error in %s:%d: Not a recognized Intel processor (family 0x%x, model 0x%x)\n", cpu_family, cpu_model);
             break;
         }
     }
     /* currently only Fam15h */
     else if (strcmp(buffer, "AuthenticAMD") == 0)
     {
-        eax = 1;
-        cpuid(&eax, &ebx, &ecx, &edx);
-        if (FAMILY(eax) + EXT_FAMILY(eax) == 15)
+        if (cpu_family == 0x15)
         {
             is_amd = true;
             supported[X86_ENERGY_COUNTER_PCKG] = true;
-        }
-        if (FAMILY(eax) + EXT_FAMILY(eax) == 17 || FAMILY(eax) + EXT_FAMILY(eax) == 23)
+        } else if ( cpu_family == 0x17 )
         {
             is_amd_rapl = true;
             supported[X86_ENERGY_COUNTER_PCKG] = true;
             supported[X86_ENERGY_COUNTER_SINGLE_CORE] = true;
+        } else
+        {
+        	x86_energy_set_error_string("Error in %s:%d: Not a recognized AMD processor (family 0x%x, model 0x%x)\n", cpu_family, cpu_model);
         }
     }
-    else
-    {
-        x86_energy_set_error_string("Error in %s:%d: The calling CPU is Neither Intel, nor AMD\n", __FILE__, __LINE__);
-        return NULL;
-    }
+
     if (is_intel)
     {
         x86_energy_mechanisms_t* t = malloc(sizeof(x86_energy_mechanisms_t));
@@ -267,9 +325,7 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
         return t;
     }
 
-    eax = 1;
-    cpuid(&eax, &ebx, &ecx, &edx);
-    x86_energy_set_error_string("Error in %s:%d: could not determine capabilities of cpu, it is not supported. CPU FAMILY %x, EXT FAMILY %x, MODEL %x, EXT MODEL %x\n", __FILE__, __LINE__, FAMILY(eax), EXT_FAMILY(eax), MODEL(eax), EXT_MODEL(eax));
+    x86_energy_set_error_string("Error in %s:%d: could not determine capabilities of cpu, it is not supported. cpu family 0x%x, cpu model 0x%x\n", __FILE__, __LINE__, cpu_family, cpu_model);
     return NULL;
 }
 
