@@ -11,6 +11,7 @@
 #include <stdbool.h>
 
 #include "../include/overflow_thread.h"
+#include "../include/error.h"
 
 static bool override_update_rate;
 static long long int override_update_rate_us;
@@ -35,12 +36,18 @@ static struct thread_info* add_thread_info(struct ov_struct* ov, int cpu, long l
     struct thread_info** new_infos =
         realloc(ov->thread_infos, sizeof(struct thread_info*) * (ov->nr_thread_infos + 1));
     if (new_infos == NULL)
+    {
+    	x86_energy_set_error_string("Error in %s:%d: could not allocate a few more bytes for storing thread info of another thread\n", __FILE__, __LINE__);
         return NULL;
+    }
     ov->thread_infos = new_infos;
     ov->nr_thread_infos++;
     struct thread_info* info = malloc(sizeof(struct thread_info));
     if (info == NULL)
+    {
+    	x86_energy_set_error_string("Error in %s:%d: could not allocate %d bytes for storing thread_info\n", __FILE__, __LINE__, sizeof(struct thread_info));
         return NULL;
+    }
     memset(info, 0, sizeof(struct thread_info));
     pthread_mutex_init(&info->mutex, NULL);
     ov->thread_infos[ov->nr_thread_infos - 1] = info;
@@ -58,6 +65,7 @@ static int add_call(struct thread_info* info, double (*read)(x86_energy_single_c
     if (new_functions == NULL)
     {
         pthread_mutex_unlock(&info->mutex);
+        x86_energy_set_error_string("Error in %s:%d: could not allocate a few more bytes for storing read function\n", __FILE__, __LINE__);
         return 1;
     }
     x86_energy_single_counter_t* new_t =
@@ -66,6 +74,7 @@ static int add_call(struct thread_info* info, double (*read)(x86_energy_single_c
     {
         info->functions = new_functions;
         pthread_mutex_unlock(&info->mutex);
+        x86_energy_set_error_string("Error in %s:%d: could not allocate %d bytes for storing thread_info\n", __FILE__, __LINE__, sizeof(struct thread_info));
         return 1;
     }
     info->functions = new_functions;
@@ -107,7 +116,10 @@ int x86_energy_overflow_thread_create(struct ov_struct* ov, int cpu, pthread_t* 
     if (info == NULL)
     {
         if (add_thread_info(ov, cpu, usleep_time) == NULL)
+        {
+        	x86_energy_append_error_string("Error in %s:%d: could not set up thread info for thread related to cpu %d\n", __FILE__, __LINE__, cpu);
             return 1;
+        }
     }
     else
     {
@@ -119,7 +131,10 @@ int x86_energy_overflow_thread_create(struct ov_struct* ov, int cpu, pthread_t* 
     if (info->thread == 0)
     {
         if (pthread_create(&(info->thread), NULL, on_overflow, info) != 0)
+        {
+        	x86_energy_set_error_string("Error in %s:%d: failed to create pthread for cpu %d\n", __FILE__, __LINE__, cpu);
             return 1;
+        }
     }
     *thread = info->thread;
     *mutex = info->mutex;
@@ -132,7 +147,10 @@ void x86_energy_overflow_thread_remove_call(struct ov_struct* ov, int cpu,
 {
     struct thread_info* info = get_thread_info(ov, cpu);
     if (info == NULL)
+    {
+    	x86_energy_set_error_string("Error in %s:%d: could not retrieve thread info for thread related to cpu %d\n", __FILE__, __LINE__, cpu);
         return;
+    }
     pthread_mutex_lock(&info->mutex);
     size_t i;
     for (i = 0; i < info->nr_functions; i++)

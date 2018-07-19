@@ -26,14 +26,14 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
 
     if (arch == NULL)
     {
-        x86_energy_append_error_string("Error while calling x86_energy_init_architecture_nodes\n");
+        x86_energy_append_error_string("Error in %s:%d: while calling x86_energy_init_architecture_nodes\n", __FILE__, __LINE__);
         return NULL;
     }
     int num_packages = x86_energy_arch_count(arch, X86_ENERGY_GRANULARITY_SOCKET);
 
     if (num_packages <= 0)
     {
-        x86_energy_append_error_string("Error while calling x86_energy_arch_count\n");
+        x86_energy_append_error_string("Error in %s:%d: while calling x86_energy_arch_count\n", __FILE__, __LINE__);
         return NULL;
     }
 
@@ -184,7 +184,7 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
     }
     else
     {
-        x86_energy_set_error_string("The calling CPU is Neither Intel, nor AMD\n");
+        x86_energy_set_error_string("Error in %s:%d: The calling CPU is Neither Intel, nor AMD\n", __FILE__, __LINE__);
         return NULL;
     }
     if (is_intel)

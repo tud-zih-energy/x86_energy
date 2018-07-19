@@ -18,6 +18,7 @@
 #include "../include/access.h"
 #include "../include/architecture.h"
 #include "../include/overflow_thread.h"
+#include "../include/error.h"
 
 #define RAPL_PATH "/sys/class/powercap"
 
@@ -47,6 +48,7 @@ static int init()
         closedir(test);
         return 0;
     }
+    x86_energy_set_error_string("Error in %s:%d: RAPL_PATH (%s) can not be read\n", __FILE__, __LINE__, RAPL_PATH);
     return 1;
 }
 
@@ -54,7 +56,10 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
 {
     int cpu = get_test_cpu(X86_ENERGY_GRANULARITY_SOCKET, index);
     if (cpu < 0)
+    {
+    	x86_energy_append_error_string("Error in %s:%d: could not find a cpu with granularity socket\n", __FILE__, __LINE__);
         return NULL;
+    }
     switch (counter_type)
     {
     case X86_ENERGY_COUNTER_PCKG:  /* fall-through */
@@ -64,10 +69,14 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     case X86_ENERGY_COUNTER_PLATFORM:
         break;
     default:
+    	x86_energy_set_error_string("Error in %s:%d: can't handle counter_type %d\n", __FILE__, __LINE__, counter_type);
         return NULL;
     }
     if (counter_type == X86_ENERGY_COUNTER_SIZE)
+    {
+    	x86_energy_set_error_string("Error in %s:%d: can't handle counter_type COUNTER_SIZE\n", __FILE__, __LINE__);
         return NULL;
+    }
     int given_package = index;
     char* name = sysfs_names[counter_type];
     struct dirent** namelist;
@@ -159,13 +168,20 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
         free(namelist);
     }
     else
+    {
+    	x86_energy_set_error_string("Error in %s:%d: can't open RAPL_PATH (%s)\n", __FILE__, __LINE__, RAPL_PATH);
         return NULL;
+    }
 
     if (final_fp == NULL)
+    {
+    	x86_energy_set_error_string("Error in %s:%d: could not get a file pointer to \"%s\"\n", __FILE__, __LINE__, file_name_buffer);
         return NULL;
+    }
     if (final_max == -1)
     {
         fclose(final_fp);
+        x86_energy_set_error_string("Error in %s:%d: could not read any max_energy_range_uj\n", __FILE__, __LINE__);
         return NULL;
     }
     long long int last_reading;
@@ -173,16 +189,19 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     if (ret < 1)
     {
         fclose(final_fp);
+        x86_energy_set_error_string("Error in %s:%d: contents in file \"%s\" do not conform to mask (unsigned long long)\n", __FILE__, __LINE__, file_name_buffer);
         return NULL;
     }
     if (fseek(final_fp, 0, SEEK_SET) != 0)
     {
         fclose(final_fp);
+        x86_energy_set_error_string("Error in %s:%d: could not seek to index 0 in file \"%s\"\n", __FILE__, __LINE__, file_name_buffer);
         return NULL;
     }
     if (fflush(final_fp) != 0)
     {
         fclose(final_fp);
+        x86_energy_set_error_string("Error in %s:%d: could not flush file \"%s\"\n", __FILE__, __LINE__, file_name_buffer);
         return NULL;
     }
 
@@ -198,6 +217,7 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     {
         fclose(final_fp);
         free(def);
+        x86_energy_set_error_string("Error in %s:%d: could not open a thread related to cpu number %d\n", __FILE__, __LINE__, cpu);
         return NULL;
     }
     return def;
@@ -211,14 +231,22 @@ static double do_read(x86_energy_single_counter_t counter)
     int ret = fscanf(def->fp, "%llu", &reading);
     if (fseek(def->fp, 0, SEEK_SET) != 0)
     {
+    	pthread_mutex_unlock(&def->mutex);
+        x86_energy_set_error_string("Error in %s:%d: could not seek to index 0 in file related to cpu %d\n", __FILE__, __LINE__, def->cpu);
         return -1.0;
     }
     if (fflush(def->fp) != 0)
     {
+    	pthread_mutex_unlock(&def->mutex);
+    	x86_energy_set_error_string("Error in %s:%d: could not flush file related to cpu %d\n", __FILE__, __LINE__, def->cpu);
         return -1.0;
     }
     if (ret < 1)
+    {
+    	pthread_mutex_unlock(&def->mutex);
+    	x86_energy_set_error_string("Error in %s:%d: contents of file related to cpu %d do not conform to mask (unsigned long long)\n", __FILE__, __LINE__, def->cpu);
         return -1.0;
+    }
     if (reading < def->last_reading)
     {
         def->overflow += 1;

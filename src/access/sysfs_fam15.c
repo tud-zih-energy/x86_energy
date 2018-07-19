@@ -56,6 +56,7 @@ static int init()
         }
         return 0;
     }
+    x86_energy_set_error_string("Error in %s:%d: call to opendir(%s) returned NULL\n", __FILE__, __LINE__, APM_PATH);
     return 1;
 }
 

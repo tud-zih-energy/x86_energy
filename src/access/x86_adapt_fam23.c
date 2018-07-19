@@ -17,6 +17,7 @@
 #include "../include/architecture.h"
 #include "../include/cpuid.h"
 #include "../include/overflow_thread.h"
+#include "../include/error.h"
 
 #define BUFFER_SIZE 4096
 #define POWER_UNIT_REGISTER "Intel_RAPL_Power_Unit"
@@ -51,7 +52,10 @@ static int init(void)
     /* search for core freq parameters */
     int xa_index = x86_adapt_lookup_ci_name(X86_ADAPT_DIE, PKG_REGISTER);
     if (xa_index < 0)
+    {
+    	x86_energy_set_error_string("Error in %s:%d: could not lookup x86 adapter index (necessary for core freq parameters)\n", __FILE__, __LINE__);
         return 1;
+    }
     return 0;
 }
 /**
@@ -67,17 +71,22 @@ static double get_default_unit()
     int xa_index_unit = x86_adapt_lookup_ci_name(X86_ADAPT_DIE, POWER_UNIT_REGISTER);
     if (xa_index_unit < 0)
     {
+    	x86_energy_set_error_string("Error in %s:%d: could not lookup index of power unit from x86 adapt\n", __FILE__, __LINE__);
         return -1.0;
     }
 
     int fd = x86_adapt_get_device_ro(X86_ADAPT_DIE, 0);
     if (fd <= 0)
+    {
+    	x86_energy_set_error_string("Error in %s:%d: could not get a file descriptor for the DIE from x86 adapt\n", __FILE__, __LINE__);
         return -1.0;
+    }
 
     uint64_t modifier_u64;
     if (x86_adapt_get_setting(fd, xa_index_unit, &modifier_u64) != 8)
     {
         //    TODO: x86_adapt_put_device(X86_ADAPT_DIE, 0);
+    	x86_energy_set_error_string("Error in %s:%d: Could not read 8 bytes from x86 adapt\n", __FILE__, __LINE__);
         return -1.0;
     }
     //    TODO: x86_adapt_put_device(X86_ADAPT_DIE, 0);
@@ -101,30 +110,47 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     case X86_ENERGY_COUNTER_PCKG:
         cpu = get_test_cpu(X86_ENERGY_GRANULARITY_SOCKET, index);
         if (cpu < 0)
+        {
+        	x86_energy_set_error_string("Error in %s:%d: could not get a cpu with granularity socket\n", __FILE__, __LINE__);
             return NULL;
+        }
         xa_index = x86_adapt_lookup_ci_name(X86_ADAPT_DIE, PKG_REGISTER);
         xa_type = X86_ADAPT_DIE;
         if (xa_index < 0)
+        {
+        	x86_energy_set_error_string("Error in %s:%d: could not get the index of PKG_REGISTER from x86 adapt\n", __FILE__, __LINE__);
             return NULL;
+        }
         fd = x86_adapt_get_device_ro(X86_ADAPT_DIE, index);
         if (fd <= 0)
+        {
+        	x86_energy_set_error_string("Error in %s:%d: could not get a file descriptor for the DIE to read from x86 adapt\n", __FILE__, __LINE__);
             return NULL;
+        }
         break;
     case X86_ENERGY_COUNTER_SINGLE_CORE:
         cpu = get_test_cpu(X86_ENERGY_GRANULARITY_CORE, index);
         if (cpu < 0)
+        {
+        	x86_energy_set_error_string("Error in %s:%d: could not get a cpu with granularity core\n", __FILE__, __LINE__);
             return NULL;
+        }
         xa_index = x86_adapt_lookup_ci_name(X86_ADAPT_CPU, CORE_REGISTER);
         xa_type = X86_ADAPT_CPU;
         if (xa_index < 0)
+        {
+        	x86_energy_set_error_string("Error in %s:%d: could not get the index of CORE_REGISTER from x86 adapt\n", __FILE__, __LINE__);
             return NULL;
+        }
         fd = x86_adapt_get_device_ro(X86_ADAPT_CPU, cpu);
         if (fd <= 0)
         {
+        	x86_energy_set_error_string("Error in %s:%d: could not get a file descriptor for the CPU to read from x86 adapt\n", __FILE__, __LINE__);
             return NULL;
         }
         break;
     default:
+    	x86_energy_set_error_string("Error in %s:%d: can't handle counter type %d\n", __FILE__, __LINE__, counter_type);
         return NULL;
     }
 
@@ -136,6 +162,7 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
             x86_adapt_put_device(X86_ADAPT_DIE, index);
         else
             x86_adapt_put_device(X86_ADAPT_CPU, cpu);*/
+    	x86_energy_append_error_string("Error in %s:%d: invalid unit\n", __FILE__, __LINE__);
         return NULL;
     }
 
@@ -149,6 +176,7 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
             x86_adapt_put_device(X86_ADAPT_DIE, index);
         else
             x86_adapt_put_device(X86_ADAPT_CPU, cpu);*/
+    	x86_energy_set_error_string("Error in %s:%d: could not read 8 bytes from x86 adapt file descriptor\n", __FILE__, __LINE__);
         return NULL;
     }
 
@@ -173,6 +201,7 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
             x86_adapt_put_device(X86_ADAPT_DIE, index);
         else
             x86_adapt_put_device(X86_ADAPT_CPU, cpu);*/
+        x86_energy_set_error_string("Error in %s:%d: can't handle counter type %d\n", __FILE__, __LINE__, counter_type);
         return NULL;
     }
     def->pkg = index;
@@ -180,6 +209,7 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
                                           30000000))
     {
         free(def);
+        x86_energy_set_error_string("Error in %s:%d: can't create thread related to cpu number %d\n", __FILE__, __LINE__, cpu);
         //    TODO: x86_adapt_put_device
         /*if (xa_type == X86_ADAPT_DIE)
             x86_adapt_put_device(X86_ADAPT_DIE, index);
@@ -196,6 +226,7 @@ static double do_read(x86_energy_single_counter_t counter)
     uint64_t reading;
     if (x86_adapt_get_setting(def->device, def->reg, &reading) != 8)
     {
+    	x86_energy_set_error_string("Error in %s:%d: could not read 8 bytes from x86_adapt\n", __FILE__, __LINE__);
         return -1.0;
     }
     if (reading < (def->last_reading & 0xFFFFFFFFULL))
