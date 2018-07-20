@@ -302,6 +302,7 @@ static x86_energy_architecture_node_t* find_child(x86_energy_architecture_node_t
             return &parent_node->children[i];
         }
     }
+    X86_ENERGY_SET_ERROR("could not find a child with id %ld", id);
     return NULL;
 }
 
@@ -314,6 +315,7 @@ static int add_cpu_and_core_to_node(const char* sysfs_path,
     long int core;
     if (read_file_long(buffer, &core))
     {
+    	X86_ENERGY_SET_ERROR("could not read file \"%s\"", buffer);
         return 1;
     }
     x86_energy_architecture_node_t* core_node = find_child(parent_node, core);
@@ -322,7 +324,10 @@ static int add_cpu_and_core_to_node(const char* sysfs_path,
         char name[256];
         sprintf(name, "Core %ld", core);
         if (insert_new_child(parent_node, X86_ENERGY_GRANULARITY_CORE, core, name))
+        {
+        	X86_ENERGY_APPEND_ERROR("could not insert child with granularity core, id %d and name \"%s\"", core, name);
             return 1;
+        }
         core_node = &parent_node->children[parent_node->nr_children - 1];
     }
     x86_energy_architecture_node_t* cpu_node = find_child(core_node, cpu);
@@ -331,7 +336,10 @@ static int add_cpu_and_core_to_node(const char* sysfs_path,
         char name[256];
         sprintf(name, "CPU %ld", cpu);
         if (insert_new_child(core_node, X86_ENERGY_GRANULARITY_THREAD, cpu, name))
+        {
             return 1;
+            X86_ENERGY_APPEND_ERROR("could not insert child with granularity thread, id %d and name \"%s\"", cpu, name);
+        }
     }
     return 0;
 }
@@ -361,6 +369,7 @@ static int add_package(x86_energy_architecture_node_t* sys_node, long int packag
         sprintf(package_name, "Processor %ld", package_id);
         if (insert_new_child(sys_node, X86_ENERGY_GRANULARITY_SOCKET, package_id, package_name))
         {
+        	X86_ENERGY_APPEND_ERROR("could not insert child with granularity socket, id %d and name \"%s\"", package_id, package_name);
             return 1;
         }
         *package_node = &sys_node->children[sys_node->nr_children - 1];
@@ -378,6 +387,7 @@ static int add_node_to_package(x86_energy_architecture_node_t* package,
             package->children, sizeof(x86_energy_architecture_node_t) * (package->nr_children + 1));
         if (tmp == NULL)
         {
+        	X86_ENERGY_SET_ERROR("could not get memory for adding new node. realloc with %d bytes failed", sizeof(x86_energy_architecture_node_t) * (package->nr_children + 1));
             return 1;
         }
         package->children = tmp;
