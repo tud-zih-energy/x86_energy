@@ -57,12 +57,12 @@ static int init()
         arch_info = x86_energy_init_architecture_nodes();
         if (arch_info == NULL)
         {
-        	x86_energy_append_error_string("Error in %s:%d: could not initialize architecture\n", __FILE__, __LINE__);
+        	X86_ENERGY_APPEND_ERROR("could not initialize architecture");
             return 1;
         }
         return 0;
     }
-    x86_energy_set_error_string("Error in %s:%d: call to opendir(%s) returned NULL\n", __FILE__, __LINE__, APM_PATH);
+    X86_ENERGY_SET_ERROR("call to opendir(%s) returned NULL", APM_PATH);
     return 1;
 }
 
@@ -71,12 +71,12 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     int cpu = get_test_cpu(X86_ENERGY_GRANULARITY_SOCKET, index);
     if (cpu < 0)
     {
-    	x86_energy_append_error_string("Error in %s:%d: no cpu with granularity socket\n", __FILE__, __LINE__);
+    	X86_ENERGY_APPEND_ERROR("no cpu with granularity socket");
         return NULL;
     }
     if (counter_type != X86_ENERGY_COUNTER_PCKG)
     {
-    	x86_energy_set_error_string("Error in %s:%d: can't handle any other counter_type than COUNTER_PCKG, counter type %d refused\n", __FILE__, __LINE__, counter_type);
+    	X86_ENERGY_SET_ERROR("can't handle any other counter_type than COUNTER_PCKG, counter type %d refused", counter_type);
         return NULL;
     }
     int given_package = index;
@@ -117,7 +117,7 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
             final_fp = fopen(file_name_buffer, "r");
             if (final_fp == NULL)
             {
-            	x86_energy_set_error_string("Error in "__FILE__":" S__LINE__ ": could not get a file pointer to \"%s\"\n", file_name_buffer);
+            	X86_ENERGY_SET_ERROR("Error in "__FILE__":" S__LINE__ ": could not get a file pointer to \"%s\"", file_name_buffer);
                 return NULL;
             }
         }
@@ -127,13 +127,13 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     }
     else
     {
-    	x86_energy_set_error_string("Error in %s:%d: could not read directory \"%s\" opendir returned NULL\n", __FILE__, __LINE__, APM_PATH);
+    	X86_ENERGY_SET_ERROR("could not read directory \"%s\" opendir returned NULL", APM_PATH);
         return NULL;
     }
 
     if (final_fp == NULL)
     {
-    	x86_energy_set_error_string("Error in %s:%d: received NULL as file pointer to \"%s\"\n", __FILE__, __LINE__, file_name_buffer);
+    	X86_ENERGY_SET_ERROR("received NULL as file pointer to \"%s\"", file_name_buffer);
         return NULL;
     }
 
@@ -142,19 +142,19 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     if (ret < 1)
     {
         fclose(final_fp);
-        x86_energy_set_error_string("Error in %s:%d: contents of file \"%s\" do not conform to mask (unsigned long long)\n", __FILE__, __LINE__, file_name_buffer);
+        X86_ENERGY_SET_ERROR("contents of file \"%s\" do not conform to mask (unsigned long long)", file_name_buffer);
         return NULL;
     }
     if (fseek(final_fp, 0, SEEK_SET) != 0)
     {
         fclose(final_fp);
-        x86_energy_set_error_string("Error in %s:%d: could not seek to index 0 in file \"%s\"\n", __FILE__, __LINE__, file_name_buffer);
+        X86_ENERGY_SET_ERROR("could not seek to index 0 in file \"%s\"", file_name_buffer);
         return NULL;
     }
     if (fflush(final_fp) != 0)
     {
         fclose(final_fp);
-        x86_energy_set_error_string("Error in %s:%d: could not flush to file \"%s\"\n", __FILE__, __LINE__, file_name_buffer);
+        X86_ENERGY_SET_ERROR("could not flush to file \"%s\"", file_name_buffer);
         return NULL;
     }
 
@@ -169,7 +169,7 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     {
         fclose(final_fp);
         free(def);
-        x86_energy_set_error_string("Error in %s:%d: could not create thread for cpu %d\n", __FILE__, __LINE__, cpu);
+        X86_ENERGY_SET_ERROR("could not create thread for cpu %d", cpu);
         return NULL;
     }
     return def;
@@ -186,19 +186,19 @@ static double do_read(x86_energy_single_counter_t counter)
     if (fseek(def->fp, 0, SEEK_SET) != 0)
     {
     	pthread_mutex_unlock(&def->mutex);
-        x86_energy_set_error_string("Error in %s:%d: could not seek to index 0 in file related to cpu %d\n", __FILE__, __LINE__, def->cpu);
+        X86_ENERGY_SET_ERROR("could not seek to index 0 in file related to cpu %d", def->cpu);
         return -1.0;
     }
     if (fflush(def->fp) != 0)
     {
     	pthread_mutex_unlock(&def->mutex);
-        x86_energy_set_error_string("Error in %s:%d: could not flush file related to cpu %d\n", __FILE__, __LINE__, def->cpu);
+        X86_ENERGY_SET_ERROR("could not flush file related to cpu %d", def->cpu);
         return -1.0;
     }
     if (ret < 1)
     {
     	pthread_mutex_unlock(&def->mutex);
-        x86_energy_set_error_string("Error in %s:%d: contents of file related to cpu %d do not conform to mask (unsigned long long)\n", __FILE__, __LINE__, def->cpu);
+        X86_ENERGY_SET_ERROR("contents of file related to cpu %d do not conform to mask (unsigned long long)", def->cpu);
         return -1.0;
     }
     double time = 1E-6 * ((1000000 * tv.tv_sec) + tv.tv_usec - def->last_reading_tv.tv_usec -

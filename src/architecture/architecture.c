@@ -26,14 +26,14 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
 
     if (arch == NULL)
     {
-        x86_energy_append_error_string("Error in %s:%d: while calling x86_energy_init_architecture_nodes\n", __FILE__, __LINE__);
+        X86_ENERGY_APPEND_ERROR("while calling x86_energy_init_architecture_nodes");
         return NULL;
     }
     int num_packages = x86_energy_arch_count(arch, X86_ENERGY_GRANULARITY_SOCKET);
 
     if (num_packages <= 0)
     {
-        x86_energy_append_error_string("Error in %s:%d: while calling x86_energy_arch_count\n", __FILE__, __LINE__);
+        X86_ENERGY_APPEND_ERROR("while calling x86_energy_arch_count");
         return NULL;
     }
 
@@ -117,7 +117,7 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
 
     } else
     {
-        x86_energy_set_error_string("Error in %s:%d: the calling CPU is neither Intel, nor AMD\n", __FILE__, __LINE__);
+        X86_ENERGY_SET_ERROR("the calling CPU is neither Intel, nor AMD");
         return NULL;
     }
 
@@ -125,7 +125,7 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
     {
         if (cpu_family != 6)
         {
-        	x86_energy_set_error_string("Error in %s:%d: Not a supported Intel processor family (family 0x%x, model 0x%x)\n", cpu_family, cpu_model);
+        	X86_ENERGY_SET_ERROR("Not a supported Intel processor family (family 0x%x, model 0x%x)", cpu_family, cpu_model);
             return 0;
         }
         switch (cpu_model)
@@ -223,7 +223,7 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
             break;
         /* none of the above */
         default:
-        	x86_energy_set_error_string("Error in %s:%d: Not a recognized Intel processor (family 0x%x, model 0x%x)\n", cpu_family, cpu_model);
+        	X86_ENERGY_SET_ERROR("Not a recognized Intel processor (family 0x%x, model 0x%x)", cpu_family, cpu_model);
             break;
         }
     }
@@ -241,7 +241,7 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
             supported[X86_ENERGY_COUNTER_SINGLE_CORE] = true;
         } else
         {
-        	x86_energy_set_error_string("Error in %s:%d: Not a recognized AMD processor (family 0x%x, model 0x%x)\n", cpu_family, cpu_model);
+        	X86_ENERGY_SET_ERROR("Not a recognized AMD processor (family 0x%x, model 0x%x)", cpu_family, cpu_model);
         }
     }
 
@@ -325,7 +325,7 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
         return t;
     }
 
-    x86_energy_set_error_string("Error in %s:%d: could not determine capabilities of cpu, it is not supported. cpu family 0x%x, cpu model 0x%x\n", __FILE__, __LINE__, cpu_family, cpu_model);
+    X86_ENERGY_SET_ERROR("could not determine capabilities of cpu, it is not supported. cpu family 0x%x, cpu model 0x%x", cpu_family, cpu_model);
     return NULL;
 }
 
@@ -343,7 +343,7 @@ find_node_internal(x86_energy_architecture_node_t* current,
             return found;
     }
 
-    x86_energy_set_error_string("Error in %s:%d: Could not find any children of node %s having a granularity of %d\n", __FILE__, __LINE__, current->name, given_granularity);
+    X86_ENERGY_SET_ERROR("Could not find any children of node %s having a granularity of %d", current->name, given_granularity);
     return NULL;
 }
 
@@ -355,7 +355,7 @@ long get_test_cpu(enum x86_energy_granularity given_granularity, unsigned long i
 
     if (sub_node == NULL)
     {
-    	x86_energy_append_error_string("Error in %s:%d: search for node with granularity value %d returned NULL\n", __FILE__, __LINE__, given_granularity);
+    	X86_ENERGY_APPEND_ERROR("search for node with granularity value %d returned NULL", given_granularity);
         return -1;
     }
 

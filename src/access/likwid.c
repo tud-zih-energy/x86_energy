@@ -53,7 +53,7 @@ static int add_likwid_initialize(long int cpu)
     long int * tmp = realloc( initialized_cpus, ( initialized_cpus_length +1 ) * sizeof (long int) );
     if ( tmp == NULL )
     {
-        x86_energy_set_error_string( "Error in %s:%d: Could not realloc likwid initialized CPUs\n", __FILE__, __LINE__ );
+        X86_ENERGY_SET_ERROR("Could not realloc likwid initialized CPUs");
         return 1;
     }
     initialized_cpus = tmp;
@@ -71,39 +71,39 @@ static int init(void)
     ret = topology_init();
     if (ret)
     {
-        x86_energy_set_error_string( "Error in %s:%d: during likwid topology_init\n", __FILE__, __LINE__);
+        X86_ENERGY_SET_ERROR("during likwid topology_init");
         return 1;
     }
     ret = HPMinit();
     if (ret)
     {
-        x86_energy_set_error_string( "Error in %s:%d: during likwid HPMinit\n", __FILE__, __LINE__);
+        X86_ENERGY_SET_ERROR("during likwid HPMinit");
         return 1;
     }
 
     ret = power_init(0);
     if (ret == 0)
     {
-        x86_energy_set_error_string( "Error in %s:%d: during likwid power_init: RAPL not supported\n", __FILE__, __LINE__);
+        X86_ENERGY_SET_ERROR("during likwid power_init: RAPL not supported");
         return 1;
     }
 
     ret = add_likwid_initialize( 0 );
     if ( ret )
     {
-        x86_energy_append_error_string( "Error in %s:%d: in add_likwid_initialize\n", __FILE__, __LINE__ );
+        X86_ENERGY_APPEND_ERROR("in add_likwid_initialize");
         return 1;
     }
 
     PowerInfo_t info = get_powerInfo();
     if (info == NULL)
     {
-        x86_energy_set_error_string( "Error in %s:%d: during likwid get_powerInfo\n", __FILE__, __LINE__ );
+        X86_ENERGY_SET_ERROR("during likwid get_powerInfo");
         return 1;
     }
     if (!info->hasRAPL)
     {
-        x86_energy_set_error_string( "Error in %s:%d: likwid info->hasRAPL: no RAPL support \n", __FILE__, __LINE__);
+        X86_ENERGY_SET_ERROR("likwid info->hasRAPL: no RAPL support ");
         return 1;
     }
     return 0;
@@ -114,7 +114,7 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     int cpu = get_test_cpu(X86_ENERGY_GRANULARITY_SOCKET, index);
     if (cpu < 0)
     {
-        x86_energy_append_error_string( "Error in %s:%d: could not get CPU for socket%li\n", __FILE__, __LINE__, index );
+        X86_ENERGY_APPEND_ERROR("could not get CPU for socket%li", index );
         return NULL;
     }
     uint64_t reg;
@@ -142,7 +142,7 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
         domain = PLATFORM;
         break;
     default:
-        x86_energy_set_error_string( "Error in %s:%d: Invalid call to likwid.c->setup counter_type= %li\n", __FILE__, __LINE__, index );
+        X86_ENERGY_SET_ERROR("Invalid call to likwid.c->setup counter_type= %li", index );
         return NULL;
     }
     uint32_t reading;
@@ -151,27 +151,27 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     {
         if ( HPMaddThread( cpu ) )
         {
-            x86_energy_set_error_string( "Error in %s:%d: Problem with HPMaddThread for CPU %li\n", __FILE__, __LINE__, cpu );
+            X86_ENERGY_SET_ERROR("Problem with HPMaddThread for CPU %li", cpu );
             return NULL;
         }
 
         int ret = add_likwid_initialize( cpu );
         if ( ret )
         {
-            x86_energy_append_error_string( "Error in %s:%d: Problem with add_likwid_initialize for CPU %li\n", __FILE__, __LINE__, cpu );
+            X86_ENERGY_APPEND_ERROR("Problem with add_likwid_initialize for CPU %li", cpu );
             return NULL;
         }
     }
 
     if (power_read(cpu, reg, &reading))
     {
-        x86_energy_set_error_string( "Error in %s:%d: Problem with power_read on CPU %li\n", __FILE__, __LINE__, cpu );
+        X86_ENERGY_SET_ERROR("Problem with power_read on CPU %li", cpu );
         return NULL;
     }
     struct reader_def* def = malloc(sizeof(struct reader_def));
     if (def == NULL)
     {
-        x86_energy_set_error_string( "Error in %s:%d: Problem with malloc during setup()\n", __FILE__, __LINE__);
+        X86_ENERGY_SET_ERROR("Problem with malloc during setup()");
         return NULL;
     }
     def->reg = reg;
@@ -180,7 +180,7 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     if (x86_energy_overflow_thread_create(&likwid_ov, cpu, &def->thread, &def->mutex, do_read, def,
                                           30000000))
     {
-        x86_energy_set_error_string( "Error in %s:%d: Error creating a thread for CPU %li\n", __FILE__, __LINE__, cpu );
+        X86_ENERGY_SET_ERROR("Error creating a thread for CPU %li", cpu );
         free(def);
         return NULL;
     }
@@ -196,7 +196,7 @@ static double do_read(x86_energy_single_counter_t counter)
     pthread_mutex_lock(&def->mutex);
     if (power_read(def->cpuId, def->reg, &reading))
     {
-        x86_energy_set_error_string( "Error in %s:%d: Error calling power_read for CPU %li REG %li\n", __FILE__, __LINE__, def->cpuId, def->reg );
+        X86_ENERGY_SET_ERROR("Error calling power_read for CPU %li REG %li", def->cpuId, def->reg );
         pthread_mutex_unlock(&def->mutex);
         return -1.0;
     }

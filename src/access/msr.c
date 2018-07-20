@@ -63,7 +63,7 @@ static int freq_gen_msr_get_max_entries()
     DIR* dir = opendir("/dev/cpu/");
     if (dir == NULL)
     {
-    	x86_energy_append_error_string("Error in %s:%d: opendir(\"/dev/cpu/\") returned NULL\n", __FILE__, __LINE__);
+    	X86_ENERGY_APPEND_ERROR("opendir(\"/dev/cpu/\") returned NULL");
         return -EIO;
     }
     struct dirent* entry;
@@ -83,7 +83,7 @@ static int freq_gen_msr_get_max_entries()
             if (snprintf(buffer, BUFFER_SIZE, "/dev/cpu/%lli/msr", current) == BUFFER_SIZE)
             {
                 closedir(dir);
-                x86_energy_set_error_string("Error in %s:%d: cpu number too big for string buffer (%d bytes)\n", __FILE__, __LINE__, BUFFER_SIZE);
+                X86_ENERGY_SET_ERROR("cpu number too big for string buffer (%d bytes)", BUFFER_SIZE);
                 return -ENOMEM;
             }
 
@@ -95,7 +95,7 @@ static int freq_gen_msr_get_max_entries()
                 if (snprintf(buffer, BUFFER_SIZE, "/dev/cpu/%lli/msr_safe", current) == BUFFER_SIZE)
                 {
                     closedir(dir);
-                    x86_energy_set_error_string("Error in %s:%d: cpu number too big for string buffer (%d bytes)\n", __FILE__, __LINE__, BUFFER_SIZE);
+                    X86_ENERGY_SET_ERROR("cpu number too big for string buffer (%d bytes)", BUFFER_SIZE);
                     return -ENOMEM;
                 }
                 if (access(buffer, R_OK) != 0)
@@ -111,7 +111,7 @@ static int freq_gen_msr_get_max_entries()
     closedir(dir);
     if (max == -1)
     {
-    	x86_energy_append_error_string("Error in %s:%d: could not access cpu data in /dev/cpu\n", __FILE__, __LINE__);
+    	X86_ENERGY_APPEND_ERROR("could not access cpu data in /dev/cpu");
         return -EACCES;
     }
     max = max + 1;
@@ -134,7 +134,7 @@ static double get_default_unit(long unsigned cpu)
 
         if (snprintf(buffer, BUFFER_SIZE, "/dev/cpu/%lu/msr", cpu) == BUFFER_SIZE)
         {
-        	x86_energy_set_error_string("Error in %s:%d: cpu number too big for string buffer (%d bytes)\n", __FILE__, __LINE__, BUFFER_SIZE);
+        	X86_ENERGY_SET_ERROR("cpu number too big for string buffer (%d bytes)", BUFFER_SIZE);
             return -1.0;
         }
 
@@ -143,13 +143,13 @@ static double get_default_unit(long unsigned cpu)
         {
             if (snprintf(buffer, BUFFER_SIZE, "/dev/cpu/%lu/msr_safe", cpu) == BUFFER_SIZE)
             {
-            	x86_energy_set_error_string("Error in %s:%d: cpu number too big for string buffer (%d bytes)\n", __FILE__, __LINE__, BUFFER_SIZE);
+            	X86_ENERGY_SET_ERROR("cpu number too big for string buffer (%d bytes)", BUFFER_SIZE);
                 return -1.0;
             }
             fds[cpu] = open(buffer, O_RDONLY);
             if (fds[cpu] < 0)
             {
-            	x86_energy_set_error_string("Error in %s:%d: Could not obtain a file descriptor for cpu %lu/msr_safe\n", __FILE__, __LINE__, cpu);
+            	X86_ENERGY_SET_ERROR("Could not obtain a file descriptor for cpu %lu/msr_safe", cpu);
                 return -1.0;
             }
         }
@@ -165,7 +165,7 @@ static double get_default_unit(long unsigned cpu)
     }
     if (result != 8)
     {
-    	x86_energy_set_error_string("Error in %s:%d: Could not read MSR_RAPL_POWER_UNIT, msr/msr_safe file too short\n", __FILE__, __LINE__, cpu);
+    	X86_ENERGY_SET_ERROR("Could not read MSR_RAPL_POWER_UNIT, msr/msr_safe file too short", cpu);
         return -1.0;
     }
 
@@ -185,7 +185,7 @@ static double get_dram_unit(long unsigned cpu)
     cpuid(&eax, &ebx, &ecx, &edx);
     if (FAMILY(eax) != 6)
     {
-    	x86_energy_set_error_string("Error in %s:%d: Unknown CPU family %x\n", __FILE__, __LINE__, FAMILY(eax));
+    	X86_ENERGY_SET_ERROR("Unknown CPU family %x", FAMILY(eax));
         return 0;
     }
     switch ((EXT_MODEL(eax) << 4) + MODEL(eax))
@@ -207,13 +207,13 @@ static int init(void)
     int max_msr = freq_gen_msr_get_max_entries();
     if (max_msr < 0)
     {
-    	x86_energy_append_error_string("Error in %s:%d: Could not figure out maximum cpu count, errorcode %d\n", __FILE__, __LINE__, max_msr);
+    	X86_ENERGY_APPEND_ERROR("Could not figure out maximum cpu count, errorcode %d", max_msr);
         return 1;
     }
     fds = calloc(max_msr, sizeof(int));
     if (fds == NULL)
     {
-    	x86_energy_set_error_string("Error in %s:%d: Could not allocate %d bytes for file descriptors\n", __FILE__, __LINE__, max_msr * sizeof(int));
+    	X86_ENERGY_SET_ERROR("Could not allocate %d bytes for file descriptors", max_msr * sizeof(int));
         return 1;
     }
     return 0;
@@ -224,7 +224,7 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     int cpu = get_test_cpu(X86_ENERGY_GRANULARITY_SOCKET, index);
     if (cpu < 0)
     {
-    	x86_energy_append_error_string("Error in %s:%d: No cpu with granularity socket\n", __FILE__, __LINE__);
+    	X86_ENERGY_APPEND_ERROR("No cpu with granularity socket");
         return NULL;
     }
     /* if not already open, open. if fail, return NULL */
@@ -235,7 +235,7 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
 
         if (snprintf(buffer, BUFFER_SIZE, "/dev/cpu/%i/msr", cpu) == BUFFER_SIZE)
         {
-        	x86_energy_set_error_string("Error in %s:%d: cpu number too big for string buffer (%d bytes)\n", __FILE__, __LINE__, BUFFER_SIZE);
+        	X86_ENERGY_SET_ERROR("cpu number too big for string buffer (%d bytes)", BUFFER_SIZE);
             return NULL;
         }
 
@@ -244,13 +244,13 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
         {
             if (snprintf(buffer, BUFFER_SIZE, "/dev/cpu/%i/msr_safe", cpu) == BUFFER_SIZE)
             {
-            	x86_energy_set_error_string("Error in %s:%d: cpu number too big for string buffer (%d bytes)\n", __FILE__, __LINE__, BUFFER_SIZE);
+            	X86_ENERGY_SET_ERROR("cpu number too big for string buffer (%d bytes)", BUFFER_SIZE);
                 return NULL;
             }
             fds[cpu] = open(buffer, O_RDONLY);
             if (fds[cpu] < 0)
             {
-            	x86_energy_set_error_string("Error in %s:%d: could not obtain a file descriptor for cpu %lu/msr_safe\n", __FILE__, __LINE__, cpu);
+            	X86_ENERGY_SET_ERROR("could not obtain a file descriptor for cpu %lu/msr_safe", cpu);
                 return NULL;
             }
         }
@@ -282,7 +282,7 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
         unit = get_default_unit(cpu);
         break;
     default:
-    	x86_energy_set_error_string("Error in %s:%d: can't handle counter type %d\n", __FILE__, __LINE__, counter_type);
+    	X86_ENERGY_SET_ERROR("can't handle counter type %d", counter_type);
         return NULL;
     }
     int64_t reading;
@@ -291,7 +291,7 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     {
         close(fds[cpu]);
         fds[cpu] = 0;
-        x86_energy_set_error_string("Error in %s:%d: could not read 8 bytes at offset %llu from file descriptor pointing to CPU number %d\n", __FILE__, __LINE__, reg, cpu);
+        X86_ENERGY_SET_ERROR("could not read 8 bytes at offset %llu from file descriptor pointing to CPU number %d", reg, cpu);
         return NULL;
     }
     struct reader_def* def = malloc(sizeof(struct reader_def));
@@ -299,7 +299,7 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     {
         close(fds[cpu]);
         fds[cpu] = 0;
-        x86_energy_set_error_string("Error in %s:%d: could not allocate %d bytes", __FILE__, __LINE__, sizeof(struct reader_def));
+        X86_ENERGY_SET_ERROR("could not allocate %d bytes", sizeof(struct reader_def));
         return NULL;
     }
     def->reg = reg;
@@ -312,7 +312,7 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
         close(fds[cpu]);
         fds[cpu] = 0;
         free(def);
-        x86_energy_set_error_string("Error in %s:%d: could not create thread for cpu %d", __FILE__, __LINE__, cpu);
+        X86_ENERGY_SET_ERROR("could not create thread for cpu %d", cpu);
         return NULL;
     }
     return (x86_energy_single_counter_t)def;
@@ -327,7 +327,7 @@ static double do_read(x86_energy_single_counter_t counter)
     if (result != 8)
     {
     	pthread_mutex_unlock(&def->mutex);
-    	x86_energy_set_error_string("Error in %s:%d: could not read 8 bytes at offset %llu from file descriptor pointing to CPU number %d. Resetting file descriptor\n", __FILE__, __LINE__, def->reg, def->cpuId);
+    	X86_ENERGY_SET_ERROR("could not read 8 bytes at offset %llu from file descriptor pointing to CPU number %d. Resetting file descriptor", def->reg, def->cpuId);
         return -1.0;
     }
     if (reading < (def->last_reading & 0xFFFFFFFFULL))
