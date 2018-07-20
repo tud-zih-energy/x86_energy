@@ -86,6 +86,18 @@ During runtime, the library will try to access the following interfaces:
 
 Option 1-5 are provided for Intel RAPL (Intel since Sandy Bridge), Option 3 and 4 are provided for AMD RAPL (e.g., AMD Zen), option 6 is provided for APM (AMD Family 15h)
 
+## Enforce a specific interface
+
+You can enforce a specific interface by setting the environment variable `X86_ENERGY_SOURCE` to one of these values:
+
+ - `likwid-rapl` selects RAPL measurement via likwid
+ - `msr-rapl` selects RAPL measurement via msr/msr-safe
+ - `sysfs-rapl` selects RAPL measurement via powercap-rapl sysfs entries
+ - `x86a-rapl` selects RAPL measurement via x86_adapt
+ - `sysfs-Fam15h` selects RAPL measurement via fam15h_power sysfs entries
+ - `msr-rapl-fam23` selects AMD RAPL measurement via msr
+ - `x86a-rapl-amd` selects AMD RAPL measurement via x86_adapt
+
 ### If anything fails
 
 1. Check whether the libraries can be loaded from the `LD_LIBRARY_PATH`.

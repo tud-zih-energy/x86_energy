@@ -7,6 +7,11 @@ int main()
 {
     x86_energy_architecture_node_t* hw_root = x86_energy_init_architecture_nodes();
     x86_energy_mechanisms_t* a = x86_energy_get_avail_mechanism();
+    if ( a == NULL)
+    {
+        fprintf(stderr,"%s",x86_energy_error_string());
+        return 1;
+    }
     printf("Architecture: %s\n", a->name);
     for (size_t i = 0; i < a->nr_avail_sources; i++)
     {
