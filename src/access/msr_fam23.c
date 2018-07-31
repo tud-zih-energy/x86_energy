@@ -20,8 +20,8 @@
 #include "../include/access.h"
 #include "../include/architecture.h"
 #include "../include/cpuid.h"
-#include "../include/overflow_thread.h"
 #include "../include/error.h"
+#include "../include/overflow_thread.h"
 
 #define BUFFER_SIZE 4096
 
@@ -60,7 +60,7 @@ static int freq_gen_msr_get_max_entries()
     DIR* dir = opendir("/dev/cpu/");
     if (dir == NULL)
     {
-    	X86_ENERGY_APPEND_ERROR("opendir(\"/dev/cpu/\") returned NULL");
+        X86_ENERGY_APPEND_ERROR("opendir(\"/dev/cpu/\") returned NULL");
         return -EIO;
     }
     struct dirent* entry;
@@ -80,7 +80,8 @@ static int freq_gen_msr_get_max_entries()
             if (snprintf(buffer, BUFFER_SIZE, "/dev/cpu/%lli/msr", current) == BUFFER_SIZE)
             {
                 closedir(dir);
-                X86_ENERGY_SET_ERROR("cpu number too big for string buffer (%d bytes)", BUFFER_SIZE);
+                X86_ENERGY_SET_ERROR("cpu number too big for string buffer (%d bytes)",
+                                     BUFFER_SIZE);
                 return -ENOMEM;
             }
 
@@ -92,7 +93,8 @@ static int freq_gen_msr_get_max_entries()
                 if (snprintf(buffer, BUFFER_SIZE, "/dev/cpu/%lli/msr_safe", current) == BUFFER_SIZE)
                 {
                     closedir(dir);
-                    X86_ENERGY_SET_ERROR("cpu number too big for string buffer (%d bytes)", BUFFER_SIZE);
+                    X86_ENERGY_SET_ERROR("cpu number too big for string buffer (%d bytes)",
+                                         BUFFER_SIZE);
                     return -ENOMEM;
                 }
                 if (access(buffer, R_OK) != 0)
@@ -108,7 +110,7 @@ static int freq_gen_msr_get_max_entries()
     closedir(dir);
     if (max == -1)
     {
-    	X86_ENERGY_APPEND_ERROR("could not access cpu data in /dev/cpu");
+        X86_ENERGY_APPEND_ERROR("could not access cpu data in /dev/cpu");
         return -EACCES;
     }
     max = max + 1;
@@ -135,7 +137,7 @@ static double get_default_unit(long unsigned cpu)
 
         if (snprintf(buffer, BUFFER_SIZE, "/dev/cpu/%lu/msr", cpu) == BUFFER_SIZE)
         {
-        	X86_ENERGY_SET_ERROR("cpu number too big for string buffer (%d bytes)", BUFFER_SIZE);
+            X86_ENERGY_SET_ERROR("cpu number too big for string buffer (%d bytes)", BUFFER_SIZE);
             return -1.0;
         }
 
@@ -144,13 +146,15 @@ static double get_default_unit(long unsigned cpu)
         {
             if (snprintf(buffer, BUFFER_SIZE, "/dev/cpu/%lu/msr_safe", cpu) == BUFFER_SIZE)
             {
-            	X86_ENERGY_SET_ERROR("cpu number too big for string buffer (%d bytes)", BUFFER_SIZE);
+                X86_ENERGY_SET_ERROR("cpu number too big for string buffer (%d bytes)",
+                                     BUFFER_SIZE);
                 return -1.0;
             }
             fds[cpu] = open(buffer, O_RDONLY);
             if (fds[cpu] < 0)
             {
-            	X86_ENERGY_SET_ERROR("Could not obtain a file descriptor for cpu %lu/msr_safe", cpu);
+                X86_ENERGY_SET_ERROR("Could not obtain a file descriptor for cpu %lu/msr_safe",
+                                     cpu);
                 return -1.0;
             }
         }
@@ -166,7 +170,7 @@ static double get_default_unit(long unsigned cpu)
     }
     if (result != 8)
     {
-    	X86_ENERGY_SET_ERROR("Could not read MSR_PWR_UNIT, msr/msr_safe file too short", cpu);
+        X86_ENERGY_SET_ERROR("Could not read MSR_PWR_UNIT, msr/msr_safe file too short", cpu);
         return -1.0;
     }
 
@@ -179,16 +183,18 @@ static double get_default_unit(long unsigned cpu)
 
 static int init(void)
 {
+    memset(&msr_ov, 0, sizeof(struct ov_struct));
     int max_msr = freq_gen_msr_get_max_entries();
     if (max_msr < 0)
     {
-    	X86_ENERGY_APPEND_ERROR("Could not figure out maximum cpu count, errorcode %d", max_msr);
+        X86_ENERGY_APPEND_ERROR("Could not figure out maximum cpu count, errorcode %d", max_msr);
         return 1;
     }
     fds = calloc(max_msr, sizeof(int));
     if (fds == NULL)
     {
-    	X86_ENERGY_SET_ERROR("Could not allocate %d bytes for file descriptors", max_msr * sizeof(int));
+        X86_ENERGY_SET_ERROR("Could not allocate %d bytes for file descriptors",
+                             max_msr * sizeof(int));
         return 1;
     }
     return 0;
@@ -209,12 +215,12 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
         reg = MSR_CORE_ENERGY_STATUS;
         break;
     default:
-    	X86_ENERGY_SET_ERROR("can't handle counter type %d", counter_type);
+        X86_ENERGY_SET_ERROR("can't handle counter type %d", counter_type);
         return NULL;
     }
     if (cpu < 0)
     {
-    	X86_ENERGY_APPEND_ERROR("No cpu with granularity %d", counter_type);
+        X86_ENERGY_APPEND_ERROR("No cpu with granularity %d", counter_type);
         return NULL;
     }
     /* if not already open, open. if fail, return NULL */
@@ -225,7 +231,7 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
 
         if (snprintf(buffer, BUFFER_SIZE, "/dev/cpu/%d/msr", cpu) == BUFFER_SIZE)
         {
-        	X86_ENERGY_SET_ERROR("cpu number too big for string buffer (%d bytes)", BUFFER_SIZE);
+            X86_ENERGY_SET_ERROR("cpu number too big for string buffer (%d bytes)", BUFFER_SIZE);
             return NULL;
         }
 
@@ -234,13 +240,15 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
         {
             if (snprintf(buffer, BUFFER_SIZE, "/dev/cpu/%d/msr_safe", cpu) == BUFFER_SIZE)
             {
-            	X86_ENERGY_SET_ERROR("cpu number too big for string buffer (%d bytes)", BUFFER_SIZE);
+                X86_ENERGY_SET_ERROR("cpu number too big for string buffer (%d bytes)",
+                                     BUFFER_SIZE);
                 return NULL;
             }
             fds[cpu] = open(buffer, O_RDONLY);
             if (fds[cpu] < 0)
             {
-            	X86_ENERGY_SET_ERROR("could not obtain a file descriptor for cpu %lu/msr_safe", cpu);
+                X86_ENERGY_SET_ERROR("could not obtain a file descriptor for cpu %lu/msr_safe",
+                                     cpu);
                 return NULL;
             }
         }
@@ -254,7 +262,9 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     {
         close(fds[cpu]);
         fds[cpu] = 0;
-        X86_ENERGY_SET_ERROR("could not read 8 bytes at offset %llu from file descriptor pointing to CPU number %d", reg, cpu);
+        X86_ENERGY_SET_ERROR(
+            "could not read 8 bytes at offset %llu from file descriptor pointing to CPU number %d",
+            reg, cpu);
         return NULL;
     }
     struct reader_def* def = malloc(sizeof(struct reader_def));
@@ -289,8 +299,10 @@ static double do_read(x86_energy_single_counter_t counter)
     int result = pread(fds[def->cpuId], &reading, 8, def->reg);
     if (result != 8)
     {
-    	pthread_mutex_unlock(&def->mutex);
-    	X86_ENERGY_SET_ERROR("could not read 8 bytes at offset %llu from file descriptor pointing to CPU number %d. Resetting file descriptor", def->reg, def->cpuId);
+        pthread_mutex_unlock(&def->mutex);
+        X86_ENERGY_SET_ERROR("could not read 8 bytes at offset %llu from file descriptor pointing "
+                             "to CPU number %d. Resetting file descriptor",
+                             def->reg, def->cpuId);
         return -1.0;
     }
     reading = reading & 0xFFFFFFFF;

@@ -5,7 +5,6 @@
  *      Author: rschoene
  */
 
-
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -19,8 +18,8 @@
 
 #include "../include/access.h"
 #include "../include/architecture.h"
-#include "../include/overflow_thread.h"
 #include "../include/error.h"
+#include "../include/overflow_thread.h"
 
 #define APM_PATH "/sys/module/fam15h_power/drivers/pci:fam15h_power/"
 #define APM_PREFIX "/hwmon/hwmon"
@@ -45,6 +44,7 @@ static double do_read(x86_energy_single_counter_t counter);
 
 static int init()
 {
+    memset(&sysfs_ov, 0, sizeof(struct ov_struct));
     DIR* test = opendir(APM_PATH);
     if (test != NULL)
     {
@@ -52,7 +52,7 @@ static int init()
         arch_info = x86_energy_init_architecture_nodes();
         if (arch_info == NULL)
         {
-        	X86_ENERGY_APPEND_ERROR("could not initialize architecture");
+            X86_ENERGY_APPEND_ERROR("could not initialize architecture");
             return 1;
         }
         return 0;
@@ -66,12 +66,14 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     int cpu = get_test_cpu(X86_ENERGY_GRANULARITY_SOCKET, index);
     if (cpu < 0)
     {
-    	X86_ENERGY_APPEND_ERROR("no cpu with granularity socket");
+        X86_ENERGY_APPEND_ERROR("no cpu with granularity socket");
         return NULL;
     }
     if (counter_type != X86_ENERGY_COUNTER_PCKG)
     {
-    	X86_ENERGY_SET_ERROR("can't handle any other counter_type than COUNTER_PCKG, counter type %d refused", counter_type);
+        X86_ENERGY_SET_ERROR(
+            "can't handle any other counter_type than COUNTER_PCKG, counter type %d refused",
+            counter_type);
         return NULL;
     }
     int given_package = index;
@@ -112,7 +114,7 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
             final_fp = fopen(file_name_buffer, "r");
             if (final_fp == NULL)
             {
-            	X86_ENERGY_SET_ERROR("could not get a file pointer to \"%s\"", file_name_buffer);
+                X86_ENERGY_SET_ERROR("could not get a file pointer to \"%s\"", file_name_buffer);
                 return NULL;
             }
         }
@@ -122,13 +124,13 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     }
     else
     {
-    	X86_ENERGY_SET_ERROR("could not read directory \"%s\" opendir returned NULL", APM_PATH);
+        X86_ENERGY_SET_ERROR("could not read directory \"%s\" opendir returned NULL", APM_PATH);
         return NULL;
     }
 
     if (final_fp == NULL)
     {
-    	X86_ENERGY_SET_ERROR("received NULL as file pointer to \"%s\"", file_name_buffer);
+        X86_ENERGY_SET_ERROR("received NULL as file pointer to \"%s\"", file_name_buffer);
         return NULL;
     }
 
@@ -137,7 +139,8 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     if (ret < 1)
     {
         fclose(final_fp);
-        X86_ENERGY_SET_ERROR("contents of file \"%s\" do not conform to mask (unsigned long long)", file_name_buffer);
+        X86_ENERGY_SET_ERROR("contents of file \"%s\" do not conform to mask (unsigned long long)",
+                             file_name_buffer);
         return NULL;
     }
     if (fseek(final_fp, 0, SEEK_SET) != 0)
@@ -180,20 +183,22 @@ static double do_read(x86_energy_single_counter_t counter)
     int ret = fscanf(def->fp, "%llu", &power_in_uW);
     if (fseek(def->fp, 0, SEEK_SET) != 0)
     {
-    	pthread_mutex_unlock(&def->mutex);
+        pthread_mutex_unlock(&def->mutex);
         X86_ENERGY_SET_ERROR("could not seek to index 0 in file related to cpu %d", def->cpu);
         return -1.0;
     }
     if (fflush(def->fp) != 0)
     {
-    	pthread_mutex_unlock(&def->mutex);
+        pthread_mutex_unlock(&def->mutex);
         X86_ENERGY_SET_ERROR("could not flush file related to cpu %d", def->cpu);
         return -1.0;
     }
     if (ret < 1)
     {
-    	pthread_mutex_unlock(&def->mutex);
-        X86_ENERGY_SET_ERROR("contents of file related to cpu %d do not conform to mask (unsigned long long)", def->cpu);
+        pthread_mutex_unlock(&def->mutex);
+        X86_ENERGY_SET_ERROR(
+            "contents of file related to cpu %d do not conform to mask (unsigned long long)",
+            def->cpu);
         return -1.0;
     }
     double time = 1E-6 * ((1000000 * tv.tv_sec) + tv.tv_usec - def->last_reading_tv.tv_usec -
