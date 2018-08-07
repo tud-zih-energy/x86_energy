@@ -159,7 +159,10 @@ void x86_energy_overflow_thread_remove_call(struct ov_struct* ov, int cpu,
             break;
     }
     if (i == info->nr_functions)
+	{
+    	pthread_mutex_unlock(&info->mutex);
         return;
+	}
 
     memcpy(&(info->functions[i]), &(info->functions[i + 1]),
            sizeof(read_function_t) * (info->nr_functions - i - 1));
