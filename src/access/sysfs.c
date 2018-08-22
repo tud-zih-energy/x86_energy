@@ -121,6 +121,7 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
             if (strncmp(buffer, "package", 7) != 0)
                 break;
             // try to read real package
+            errno = 0;
             package = strtol(&buffer[8], NULL, 10);
             if (package == 0 && errno != 0)
                 break;
