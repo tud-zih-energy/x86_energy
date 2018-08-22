@@ -31,9 +31,13 @@ static bool is_selected_source(x86_energy_access_source_t source)
         env_initialized = true;
     }
     if ( env_string == NULL )
+    {
         return true;
+    }
     if ( strcmp( env_string, source.name ) == 0 )
+    {
         return true;
+    }
     return false;
 }
 
@@ -287,18 +291,28 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
 
         t->nr_avail_sources = 0;
         if ( is_selected_source ( sysfs_source ) )
+        {
             t->nr_avail_sources += 1;
+        }
         if ( is_selected_source ( perf_source ) )
+        {
             t->nr_avail_sources += 1;
+        }
         if ( is_selected_source ( msr_source ) )
+        {
             t->nr_avail_sources += 1;
+        }
 #ifdef USELIKWID
         if ( is_selected_source ( likwid_source ) )
+        {
             t->nr_avail_sources += 1;
+        }
 #endif
 #ifdef USEX86_ADAPT
         if ( is_selected_source ( x86a_source ) )
+        {
             t->nr_avail_sources += 1;
+        }
 #endif
         if ( t->nr_avail_sources == 0 )
         {
@@ -315,18 +329,28 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
 
         int current = 0;
         if ( is_selected_source ( sysfs_source ) )
+        {
             t->avail_sources[current++] = sysfs_source;
+        }
         if ( is_selected_source ( perf_source ) )
+        {
             t->avail_sources[current++] = perf_source;
+        }
         if ( is_selected_source ( msr_source ) )
+        {
             t->avail_sources[current++] = msr_source;
+        }
 #ifdef USELIKWID
         if ( is_selected_source ( likwid_source ) )
+        {
             t->avail_sources[current++] = likwid_source;
+        }
 #endif
 #ifdef USEX86_ADAPT
         if ( is_selected_source ( x86a_source ) )
+        {
             t->avail_sources[current++] = x86a_source;
+        }
 #endif
         return t;
     }
@@ -383,10 +407,14 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
 
         t->nr_avail_sources = 0;
         if ( is_selected_source ( msr_fam23_source ) )
+        {
             t->nr_avail_sources += 1;
+        }
 #ifdef USEX86_ADAPT
         if ( is_selected_source ( x86a_fam23_source ) )
+        {
             t->nr_avail_sources += 1;
+        }
 #endif
         if ( t->nr_avail_sources == 0 )
         {
@@ -402,11 +430,15 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
         }
 
         if ( is_selected_source ( msr_fam23_source ) )
+        {
             t->avail_sources[0] = msr_fam23_source;
+        }
 
 #ifdef USEX86_ADAPT
         if ( is_selected_source ( x86a_fam23_source ) )
+        {
             t->avail_sources[1] = x86a_fam23_source;
+        }
 #endif
         return t;
     }
