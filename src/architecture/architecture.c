@@ -28,6 +28,11 @@ static bool is_selected_source(x86_energy_access_source_t source)
     if ( !env_initialized )
     {
         env_string = getenv("X86_ENERGY_SOURCE");
+        if ( env_string != NULL )
+        {
+            env_string =strdup( env_string );
+            /* TODO check return value */
+        }
         env_initialized = true;
     }
     if ( env_string == NULL )
