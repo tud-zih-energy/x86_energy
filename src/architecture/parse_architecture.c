@@ -137,7 +137,7 @@ static int read_file_long_list(char* file, long int** result, int* length)
             }
 
             for ( long int i = read_cpu; i <= end_cpu ; i ++ )
-                tmp[ *length + ( i - read_cpu ) ] = read_cpu ;
+                tmp[ *length + ( i - read_cpu ) ] = i ;
 
             *result = tmp;
             (*length) += end_cpu - read_cpu + 1;
