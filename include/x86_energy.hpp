@@ -349,7 +349,7 @@ public:
     {
         if (mechanism_ == nullptr)
         {
-            throw std::runtime_error("Couldn't get the available mechanism.");
+            throw std::runtime_error(x86_energy_error_string());
         }
     }
 
