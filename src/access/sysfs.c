@@ -92,6 +92,13 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
         closedir(test);
 
         n = total_files = scandir(RAPL_PATH, &namelist, NULL, alphasort);
+
+        if (totalfiles == 0)
+        {
+            X86_ENERGY_SET_ERROR("No valid devices in %s", RAPL_PATH);
+            return NULL;
+        }
+
         while (n--)
         {
             int package;
@@ -173,12 +180,6 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     else
     {
         X86_ENERGY_SET_ERROR("can't open RAPL_PATH (%s)", RAPL_PATH);
-        return NULL;
-    }
-
-    if (read_items <= 0)
-    {
-        X86_ENERGY_SET_ERROR("No valid devices in %s", RAPL_PATH);
         return NULL;
     }
 
