@@ -46,8 +46,37 @@ static int init()
     DIR* test = opendir(RAPL_PATH);
     if (test != NULL)
     {
+        int i, total_files, found_index=0;
+        int package;
+        int dummy;
+        struct dirent** namelist;
+        total_files = scandir(RAPL_PATH, &namelist, NULL, alphasort);
+        if ( total_files > 0 )
+        {
+            for ( i = 0; i < total_files ; i++ )
+            {
+                int read_items = sscanf(namelist[i]->d_name, "intel-rapl:%d:%d", &package, &dummy);
+                if (read_items > 0)
+                {
+                    break;
+                }
+            }
+            if ( i < total_files )
+                found_index = i;
+            else
+                found_index = total_files;
+            for (i = 0; i < total_files; i++)
+                free(namelist[i]);
+            free(namelist);
+        }
         closedir(test);
-        return 0;
+        if ( found_index < total_files )
+            return 0;
+        else
+        {
+            X86_ENERGY_SET_ERROR("No valid entries in RAPL_PATH (", RAPL_PATH," )");
+            return 1;
+        }
     }
     X86_ENERGY_SET_ERROR("RAPL_PATH (%s) can not be read", RAPL_PATH);
     return 1;
@@ -81,7 +110,7 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     int given_package = index;
     char* name = sysfs_names[counter_type];
     struct dirent** namelist;
-    int n, ret, total_files;
+    int n, ret, total_files, read_items=0;
     char file_name_buffer[2048];
     FILE* final_fp = NULL;
     long long int final_max = -1;
@@ -92,13 +121,14 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
         closedir(test);
 
         n = total_files = scandir(RAPL_PATH, &namelist, NULL, alphasort);
+
         while (n--)
         {
             int package;
             int dummy;
             // first we go through all
             // /sys/class/powercap/intel-rapl\:<N> and /sys/class/powercap/intel-rapl\:<N>:<M>
-            int read_items = sscanf(namelist[n]->d_name, "intel-rapl:%d:%d", &package, &dummy);
+            read_items = sscanf(namelist[n]->d_name, "intel-rapl:%d:%d", &package, &dummy);
             if (read_items <= 0)
                 continue;
             // now we verify that we are using the correct package in
@@ -178,9 +208,18 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
 
     if (final_fp == NULL)
     {
-        X86_ENERGY_SET_ERROR("could not get a file pointer to \"%s\"", file_name_buffer);
-        return NULL;
+        if ( read_items <= 0 )
+        {
+            X86_ENERGY_SET_ERROR("No valid files found in " RAPL_PATH);
+            return NULL;
+        }
+        else
+        {
+            X86_ENERGY_SET_ERROR("could not get a file pointer to \"%s\"", file_name_buffer);
+            return NULL;
+        }
     }
+
     if (final_max == -1)
     {
         fclose(final_fp);
