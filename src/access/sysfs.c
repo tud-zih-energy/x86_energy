@@ -70,7 +70,7 @@ static int init()
             free(namelist);
         }
         closedir(test);
-        if ( found_index )
+        if ( found_index == total_files )
             return 0;
         else
         {
