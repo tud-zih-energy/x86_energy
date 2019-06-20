@@ -176,6 +176,12 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
         return NULL;
     }
 
+    if (read_items <= 0)
+    {
+        X86_ENERGY_SET_ERROR("No valid devices in %s", RAPL_PATH);
+        return NULL;
+    }
+
     if (final_fp == NULL)
     {
         X86_ENERGY_SET_ERROR("could not get a file pointer to \"%s\"", file_name_buffer);
