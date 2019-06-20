@@ -64,7 +64,7 @@ static int init()
             if ( i < total_files )
                 found_index = i;
             else
-                found_index = total_files
+                found_index = total_files;
             for (i = 0; i < found_index; i++)
                 free(namelist[i]);
             free(namelist);
