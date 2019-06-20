@@ -93,7 +93,7 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
 
         n = total_files = scandir(RAPL_PATH, &namelist, NULL, alphasort);
 
-        if (totalfiles == 0)
+        if (total_files == 0)
         {
             X86_ENERGY_SET_ERROR("No valid devices in %s", RAPL_PATH);
             return NULL;
