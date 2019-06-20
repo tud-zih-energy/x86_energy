@@ -329,6 +329,7 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
         if ( t->avail_sources == NULL )
         {
             X86_ENERGY_SET_ERROR("Error allocating memory");
+            free( t );
             return NULL;
         }
 
@@ -377,6 +378,7 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
         if ( ! is_selected_source ( sysfs_fam15_source ) )
         {
             X86_ENERGY_SET_ERROR("No available source selected");
+            free( t );
             return NULL;
         }
 
@@ -385,6 +387,7 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
         if ( t->avail_sources == NULL )
         {
             X86_ENERGY_SET_ERROR("Error allocating memory");
+            free( t );
             return NULL;
         }
         t->avail_sources[0] = sysfs_fam15_source;
@@ -431,6 +434,7 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
         if ( t->avail_sources == NULL )
         {
             X86_ENERGY_SET_ERROR("Error allocating memory");
+            free( t );
             return NULL;
         }
 
