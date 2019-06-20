@@ -46,8 +46,37 @@ static int init()
     DIR* test = opendir(RAPL_PATH);
     if (test != NULL)
     {
+        int i, total_files, found_index=0;
+        int package;
+        int dummy;
+        struct dirent** namelist;
+        total_files = scandir(RAPL_PATH, &namelist, NULL, alphasort);
+        if ( total_files > 0 )
+        {
+            for ( i = 0; i < total_files ; i++ )
+            {
+                read_items = sscanf(namelist[i]->d_name, "intel-rapl:%d:%d", &package, &dummy);
+                if (read_items > 0)
+                {
+                    break;
+                }
+            }
+            if ( i < total_files )
+                found_index = i;
+            else
+                found_index = total_files
+            for (i = 0; i < found_index; i++)
+                free(namelist[i]);
+            free(namelist);
+        }
         closedir(test);
-        return 0;
+        if ( found_index )
+            return 0;
+        else
+        {
+            X86_ENERGY_SET_ERROR("No valid entries in RAPL_PATH (", RAPL_PATH," )");
+            return 1;
+        }
     }
     X86_ENERGY_SET_ERROR("RAPL_PATH (%s) can not be read", RAPL_PATH);
     return 1;
