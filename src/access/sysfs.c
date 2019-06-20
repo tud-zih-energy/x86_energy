@@ -55,7 +55,7 @@ static int init()
         {
             for ( i = 0; i < total_files ; i++ )
             {
-                read_items = sscanf(namelist[i]->d_name, "intel-rapl:%d:%d", &package, &dummy);
+                int read_items = sscanf(namelist[i]->d_name, "intel-rapl:%d:%d", &package, &dummy);
                 if (read_items > 0)
                 {
                     break;
