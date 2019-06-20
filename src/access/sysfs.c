@@ -65,12 +65,12 @@ static int init()
                 found_index = i;
             else
                 found_index = total_files;
-            for (i = 0; i < found_index; i++)
+            for (i = 0; i < total_files; i++)
                 free(namelist[i]);
             free(namelist);
         }
         closedir(test);
-        if ( found_index == total_files )
+        if ( found_index < total_files )
             return 0;
         else
         {
