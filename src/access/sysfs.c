@@ -17,8 +17,8 @@
 
 #include "../include/access.h"
 #include "../include/architecture.h"
-#include "../include/overflow_thread.h"
 #include "../include/error.h"
+#include "../include/overflow_thread.h"
 
 #define RAPL_PATH "/sys/class/powercap"
 
@@ -42,6 +42,7 @@ static double do_read(x86_energy_single_counter_t counter);
 
 static int init()
 {
+    memset(&sysfs_ov, 0, sizeof(struct ov_struct));
     DIR* test = opendir(RAPL_PATH);
     if (test != NULL)
     {
@@ -57,7 +58,7 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     int cpu = get_test_cpu(X86_ENERGY_GRANULARITY_SOCKET, index);
     if (cpu < 0)
     {
-    	X86_ENERGY_APPEND_ERROR("could not find a cpu with granularity socket");
+        X86_ENERGY_APPEND_ERROR("could not find a cpu with granularity socket");
         return NULL;
     }
     switch (counter_type)
@@ -69,12 +70,12 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     case X86_ENERGY_COUNTER_PLATFORM:
         break;
     default:
-    	X86_ENERGY_SET_ERROR("can't handle counter_type %d", counter_type);
+        X86_ENERGY_SET_ERROR("can't handle counter_type %d", counter_type);
         return NULL;
     }
     if (counter_type == X86_ENERGY_COUNTER_SIZE)
     {
-    	X86_ENERGY_SET_ERROR("can't handle counter_type COUNTER_SIZE");
+        X86_ENERGY_SET_ERROR("can't handle counter_type COUNTER_SIZE");
         return NULL;
     }
     int given_package = index;
@@ -100,7 +101,8 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
             int read_items = sscanf(namelist[n]->d_name, "intel-rapl:%d:%d", &package, &dummy);
             if (read_items <= 0)
                 continue;
-            // now we verify that we are using the correct package in /sys/class/powercap/intel-rapl\:<N>/name
+            // now we verify that we are using the correct package in
+            // /sys/class/powercap/intel-rapl\:<N>/name
             sprintf(file_name_buffer, "%s/intel-rapl:%d/name", RAPL_PATH, package);
             FILE* fp = fopen(file_name_buffer, "r");
             if (fp == NULL)
@@ -119,8 +121,9 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
             if (strncmp(buffer, "package", 7) != 0)
                 break;
             // try to read real package
-            package = strtol(&buffer[8],NULL,10);
-            if ( package == 0 && errno != 0 )
+            errno = 0;
+            package = strtol(&buffer[8], NULL, 10);
+            if (package == 0 && errno != 0)
                 break;
             // not the package we were looking for?
             if (package != given_package)
@@ -169,13 +172,13 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     }
     else
     {
-    	X86_ENERGY_SET_ERROR("can't open RAPL_PATH (%s)", RAPL_PATH);
+        X86_ENERGY_SET_ERROR("can't open RAPL_PATH (%s)", RAPL_PATH);
         return NULL;
     }
 
     if (final_fp == NULL)
     {
-    	X86_ENERGY_SET_ERROR("could not get a file pointer to \"%s\"", file_name_buffer);
+        X86_ENERGY_SET_ERROR("could not get a file pointer to \"%s\"", file_name_buffer);
         return NULL;
     }
     if (final_max == -1)
@@ -189,7 +192,8 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     if (ret < 1)
     {
         fclose(final_fp);
-        X86_ENERGY_SET_ERROR("contents in file \"%s\" do not conform to mask (unsigned long long)", file_name_buffer);
+        X86_ENERGY_SET_ERROR("contents in file \"%s\" do not conform to mask (unsigned long long)",
+                             file_name_buffer);
         return NULL;
     }
     if (fseek(final_fp, 0, SEEK_SET) != 0)
@@ -231,20 +235,22 @@ static double do_read(x86_energy_single_counter_t counter)
     int ret = fscanf(def->fp, "%llu", &reading);
     if (fseek(def->fp, 0, SEEK_SET) != 0)
     {
-    	pthread_mutex_unlock(&def->mutex);
+        pthread_mutex_unlock(&def->mutex);
         X86_ENERGY_SET_ERROR("could not seek to index 0 in file related to cpu %d", def->cpu);
         return -1.0;
     }
     if (fflush(def->fp) != 0)
     {
-    	pthread_mutex_unlock(&def->mutex);
-    	X86_ENERGY_SET_ERROR("could not flush file related to cpu %d", def->cpu);
+        pthread_mutex_unlock(&def->mutex);
+        X86_ENERGY_SET_ERROR("could not flush file related to cpu %d", def->cpu);
         return -1.0;
     }
     if (ret < 1)
     {
-    	pthread_mutex_unlock(&def->mutex);
-    	X86_ENERGY_SET_ERROR("contents of file related to cpu %d do not conform to mask (unsigned long long)", def->cpu);
+        pthread_mutex_unlock(&def->mutex);
+        X86_ENERGY_SET_ERROR(
+            "contents of file related to cpu %d do not conform to mask (unsigned long long)",
+            def->cpu);
         return -1.0;
     }
     if (reading < def->last_reading)

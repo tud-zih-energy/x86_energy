@@ -16,8 +16,8 @@
 #include "../include/access.h"
 #include "../include/architecture.h"
 #include "../include/cpuid.h"
-#include "../include/overflow_thread.h"
 #include "../include/error.h"
+#include "../include/overflow_thread.h"
 
 #define BUFFER_SIZE 4096
 #define POWER_UNIT_REGISTER "Intel_RAPL_Power_Unit"
@@ -45,7 +45,7 @@ static double do_read(x86_energy_single_counter_t counter);
 
 static int init(void)
 {
-
+    memset(&x86a_ov, 0, sizeof(struct ov_struct));
     int ret = x86_adapt_init();
 
     if (ret)
@@ -97,41 +97,44 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     case X86_ENERGY_COUNTER_GPU:   /* fall-through */
         break;
     default:
-        X86_ENERGY_SET_ERROR("Invalid call to x86_adapt.c->setup counter_type= %d", counter_type );
+        X86_ENERGY_SET_ERROR("Invalid call to x86_adapt.c->setup counter_type= %d", counter_type);
         return NULL;
     }
 
     int cpu = get_test_cpu(X86_ENERGY_GRANULARITY_SOCKET, index);
     if (cpu < 0)
     {
-        X86_ENERGY_APPEND_ERROR("calling get_test_cpu for socket %d", index );
+        X86_ENERGY_APPEND_ERROR("calling get_test_cpu for socket %d", index);
         return NULL;
     }
     char* name = x86a_names[counter_type];
     if (name == NULL)
     {
-        X86_ENERGY_SET_ERROR("setup counter_type %d not supported", index );
+        X86_ENERGY_SET_ERROR("setup counter_type %d not supported", index);
         return NULL;
     }
 
     int xa_index = x86_adapt_lookup_ci_name(X86_ADAPT_DIE, name);
     if (xa_index < 0)
     {
-        X86_ENERGY_SET_ERROR("setup Error calling x86_adapt_lookup_ci_name for %s %d", name, xa_index );
+        X86_ENERGY_SET_ERROR("setup Error calling x86_adapt_lookup_ci_name for %s %d", name,
+                             xa_index);
         return NULL;
     }
 
     int fd = x86_adapt_get_device_ro(X86_ADAPT_DIE, index);
     if (fd <= 0)
     {
-        X86_ENERGY_SET_ERROR("setup Error calling x86_adapt_get_device_ro for package %d %d", index, fd );
+        X86_ENERGY_SET_ERROR("setup Error calling x86_adapt_get_device_ro for package %d %d", index,
+                             fd);
         return NULL;
     }
 
     int xa_index_unit = x86_adapt_lookup_ci_name(X86_ADAPT_DIE, POWER_UNIT_REGISTER);
     if (xa_index_unit < 0)
     {
-        X86_ENERGY_SET_ERROR("setup Error calling x86_adapt_lookup_ci_name for power unit %d", name, xa_index );
+        X86_ENERGY_SET_ERROR("setup Error calling x86_adapt_lookup_ci_name for power unit %d", name,
+                             xa_index);
         close(fd);
         x86_adapt_put_device(X86_ADAPT_DIE, index);
         return NULL;
@@ -160,7 +163,7 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
     uint64_t current_setting;
     if (x86_adapt_get_setting(fd, xa_index, &current_setting) != 8)
     {
-        X86_ENERGY_SET_ERROR("setup Error calling x86_adapt_get_setting for packaged %d", index );
+        X86_ENERGY_SET_ERROR("setup Error calling x86_adapt_get_setting for packaged %d", index);
         close(fd);
         x86_adapt_put_device(X86_ADAPT_DIE, index);
         return NULL;
@@ -190,7 +193,7 @@ static double do_read(x86_energy_single_counter_t counter)
     uint64_t reading;
     if (x86_adapt_get_setting(def->device, def->reg, &reading) != 8)
     {
-    	X86_ENERGY_SET_ERROR("could not retrieve 8 bytes from x86_adapt");
+        X86_ENERGY_SET_ERROR("could not retrieve 8 bytes from x86_adapt");
         return -1.0;
     }
     if (reading < (def->last_reading & 0xFFFFFFFFULL))

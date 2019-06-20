@@ -6,17 +6,21 @@
  */
 
 #include "../../include/x86_energy.h"
+#include "../include/error.h"
 
 static int init(void)
 {
+    X86_ENERGY_SET_ERROR("Not yet implemented");
     return 1;
 }
 static x86_energy_single_counter_t setup(enum x86_energy_counter counter, size_t index)
 {
+    X86_ENERGY_SET_ERROR("Not yet implemented");
     return NULL;
 }
 static double do_read(x86_energy_single_counter_t t)
 {
+    X86_ENERGY_SET_ERROR("Not yet implemented");
     return -1.0;
 }
 static void do_close(x86_energy_single_counter_t t)

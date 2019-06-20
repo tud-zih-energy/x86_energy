@@ -15,7 +15,8 @@
 #include <system_error>
 #include <vector>
 
-extern "C" {
+extern "C"
+{
 #include <x86_energy.h>
 }
 
@@ -172,18 +173,25 @@ public:
     Architecture() : root_node_(x86_energy_init_architecture_nodes())
     {
         node_ = root_node_.get();
-        initialize_children();
-
         if (node_ == nullptr)
         {
-            throw std::runtime_error("Couldn't get architecture description of the system.");
+            throw std::runtime_error(x86_energy_error_string());
         }
+
+        initialize_children();
     }
 
     ArchitectureNode get_arch_for_cpu(Granularity granularity, int cpu) const
     {
-        return ArchitectureNode(x86_energy_find_arch_for_cpu(
-            root_node_.get(), static_cast<x86_energy_granularity>(granularity), cpu));
+        auto node = x86_energy_find_arch_for_cpu(
+            root_node_.get(), static_cast<x86_energy_granularity>(granularity), cpu);
+
+        if (node == nullptr)
+        {
+            throw std::runtime_error(x86_energy_error_string());
+        }
+
+        return ArchitectureNode(node);
     }
 
     int size(Granularity granularity) const
@@ -324,7 +332,7 @@ public:
             source_->setup(static_cast<x86_energy_counter>(counter), index);
         if (result == nullptr)
         {
-            throw std::runtime_error("could not set up source");
+            throw std::runtime_error(x86_energy_error_string());
         }
         return { source_, result };
     }
@@ -341,7 +349,7 @@ public:
     {
         if (mechanism_ == nullptr)
         {
-            throw std::runtime_error("Couldn't get the available mechanism.");
+            throw std::runtime_error(x86_energy_error_string());
         }
     }
 
