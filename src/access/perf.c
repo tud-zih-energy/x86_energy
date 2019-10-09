@@ -25,7 +25,7 @@
 #include "../include/error.h"
 
 static char* strings_for_events[X86_ENERGY_COUNTER_SIZE] = {
-    "pkg", "cores", "ram", "gpu", "sys",
+    "pkg", "cores", "ram", "gpu", "psys",
 };
 
 struct reader_def

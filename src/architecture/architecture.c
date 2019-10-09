@@ -20,6 +20,32 @@
 
 static x86_energy_architecture_node_t* arch;
 
+
+static bool is_selected_source(x86_energy_access_source_t source)
+{
+    static bool env_initialized = false;
+    static char * env_string = NULL;
+    if ( !env_initialized )
+    {
+        env_string = getenv("X86_ENERGY_SOURCE");
+        if ( env_string != NULL )
+        {
+            env_string =strdup( env_string );
+            /* TODO check return value */
+        }
+        env_initialized = true;
+    }
+    if ( env_string == NULL )
+    {
+        return true;
+    }
+    if ( strcmp( env_string, source.name ) == 0 )
+    {
+        return true;
+    }
+    return false;
+}
+
 x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
 {
     arch = x86_energy_init_architecture_nodes();
@@ -255,44 +281,100 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
     if (is_intel)
     {
         x86_energy_mechanisms_t* t = malloc(sizeof(x86_energy_mechanisms_t));
+        if ( t == NULL )
+        {
+            X86_ENERGY_SET_ERROR("Error allocating memory");
+            return NULL;
+        }
+
+        /* initialize witrh invalid */
+        for (int i = 0; i < X86_ENERGY_COUNTER_SIZE; i++)
+            t->source_granularities[i] = X86_ENERGY_GRANULARITY_SIZE;
+
         t->name = "Intel RAPL";
         for (int i = 0; i < X86_ENERGY_COUNTER_PLATFORM; i++)
             if (supported[i])
                 t->source_granularities[i] = X86_ENERGY_GRANULARITY_SOCKET;
-            else
-                t->source_granularities[i] = X86_ENERGY_GRANULARITY_SIZE;
         if (supported[X86_ENERGY_COUNTER_PLATFORM])
             t->source_granularities[X86_ENERGY_COUNTER_PLATFORM] = X86_ENERGY_GRANULARITY_SYSTEM;
-        else
-            t->source_granularities[X86_ENERGY_COUNTER_PLATFORM] = X86_ENERGY_GRANULARITY_SIZE;
+
         if (supported[X86_ENERGY_COUNTER_SINGLE_CORE])
             t->source_granularities[X86_ENERGY_COUNTER_SINGLE_CORE] = X86_ENERGY_GRANULARITY_CORE;
-        else
-            t->source_granularities[X86_ENERGY_COUNTER_SINGLE_CORE] = X86_ENERGY_GRANULARITY_SIZE;
-        t->nr_avail_sources = 3;
+
+        t->nr_avail_sources = 0;
+        if ( is_selected_source ( sysfs_source ) )
+        {
+            t->nr_avail_sources += 1;
+        }
+        if ( is_selected_source ( perf_source ) )
+        {
+            t->nr_avail_sources += 1;
+        }
+        if ( is_selected_source ( msr_source ) )
+        {
+            t->nr_avail_sources += 1;
+        }
 #ifdef USELIKWID
-        t->nr_avail_sources += 1;
+        if ( is_selected_source ( likwid_source ) )
+        {
+            t->nr_avail_sources += 1;
+        }
 #endif
 #ifdef USEX86_ADAPT
-        t->nr_avail_sources += 1;
+        if ( is_selected_source ( x86a_source ) )
+        {
+            t->nr_avail_sources += 1;
+        }
 #endif
+        if ( t->nr_avail_sources == 0 )
+        {
+            X86_ENERGY_SET_ERROR("No available source selected");
+            free( t );
+            return NULL;
+        }
         t->avail_sources = malloc(t->nr_avail_sources * sizeof(x86_energy_access_source_t));
+        if ( t->avail_sources == NULL )
+        {
+            X86_ENERGY_SET_ERROR("Error allocating memory");
+            free( t );
+            return NULL;
+        }
 
         int current = 0;
-        t->avail_sources[current++] = sysfs_source;
-        t->avail_sources[current++] = perf_source;
-        t->avail_sources[current++] = msr_source;
+        if ( is_selected_source ( sysfs_source ) )
+        {
+            t->avail_sources[current++] = sysfs_source;
+        }
+        if ( is_selected_source ( perf_source ) )
+        {
+            t->avail_sources[current++] = perf_source;
+        }
+        if ( is_selected_source ( msr_source ) )
+        {
+            t->avail_sources[current++] = msr_source;
+        }
 #ifdef USELIKWID
-        t->avail_sources[current++] = likwid_source;
+        if ( is_selected_source ( likwid_source ) )
+        {
+            t->avail_sources[current++] = likwid_source;
+        }
 #endif
 #ifdef USEX86_ADAPT
-        t->avail_sources[current++] = x86a_source;
+        if ( is_selected_source ( x86a_source ) )
+        {
+            t->avail_sources[current++] = x86a_source;
+        }
 #endif
         return t;
     }
     if (is_amd)
     {
         x86_energy_mechanisms_t* t = malloc(sizeof(x86_energy_mechanisms_t));
+        if ( t == NULL )
+        {
+            X86_ENERGY_SET_ERROR("Error allocating memory");
+            return NULL;
+        }
         t->name = "AMD APM";
         for (int i = 0; i < X86_ENERGY_COUNTER_SIZE; i++)
             if (supported[i])
@@ -300,8 +382,21 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
             else
                 t->source_granularities[i] = X86_ENERGY_GRANULARITY_SIZE;
 
+        if ( ! is_selected_source ( sysfs_fam15_source ) )
+        {
+            X86_ENERGY_SET_ERROR("No available source selected");
+            free( t );
+            return NULL;
+        }
+
         t->nr_avail_sources = 1;
         t->avail_sources = malloc(1 * sizeof(x86_energy_access_source_t));
+        if ( t->avail_sources == NULL )
+        {
+            X86_ENERGY_SET_ERROR("Error allocating memory");
+            free( t );
+            return NULL;
+        }
         t->avail_sources[0] = sysfs_fam15_source;
 
 // TODO msr
@@ -313,21 +408,53 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
     if (is_amd_rapl)
     {
         x86_energy_mechanisms_t* t = malloc(sizeof(x86_energy_mechanisms_t));
+        if ( t == NULL )
+        {
+            X86_ENERGY_SET_ERROR("Error allocating memory");
+            return NULL;
+        }
         t->name = "AMD RAPL";
         for (int i = 0; i < X86_ENERGY_COUNTER_SIZE; i++)
             t->source_granularities[i] = X86_ENERGY_GRANULARITY_SIZE;
+
         t->source_granularities[X86_ENERGY_COUNTER_SINGLE_CORE] = X86_ENERGY_GRANULARITY_CORE;
         t->source_granularities[X86_ENERGY_COUNTER_PCKG] = X86_ENERGY_GRANULARITY_SOCKET;
 
-        t->nr_avail_sources = 1;
+        t->nr_avail_sources = 0;
+        if ( is_selected_source ( msr_fam23_source ) )
+        {
+            t->nr_avail_sources += 1;
+        }
 #ifdef USEX86_ADAPT
-        t->nr_avail_sources++;
+        if ( is_selected_source ( x86a_fam23_source ) )
+        {
+            t->nr_avail_sources += 1;
+        }
 #endif
+        if ( t->nr_avail_sources == 0 )
+        {
+            X86_ENERGY_SET_ERROR("No available source selected");
+            free( t );
+            return NULL;
+        }
         t->avail_sources = malloc(t->nr_avail_sources * sizeof(x86_energy_access_source_t));
-        t->avail_sources[0] = msr_fam23_source;
+        if ( t->avail_sources == NULL )
+        {
+            X86_ENERGY_SET_ERROR("Error allocating memory");
+            free( t );
+            return NULL;
+        }
+
+        if ( is_selected_source ( msr_fam23_source ) )
+        {
+            t->avail_sources[0] = msr_fam23_source;
+        }
 
 #ifdef USEX86_ADAPT
-        t->avail_sources[1] = x86a_fam23_source;
+        if ( is_selected_source ( x86a_fam23_source ) )
+        {
+            t->avail_sources[1] = x86a_fam23_source;
+        }
 #endif
         return t;
     }
