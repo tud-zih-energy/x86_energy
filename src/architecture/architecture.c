@@ -178,7 +178,6 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
             break;
         case 0x3f:
             supported[X86_ENERGY_COUNTER_PCKG] = true;
-            supported[X86_ENERGY_COUNTER_CORES] = true;
             supported[X86_ENERGY_COUNTER_DRAM] = true;
             is_intel = true;
             break;
