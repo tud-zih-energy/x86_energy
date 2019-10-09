@@ -102,11 +102,6 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
         X86_ENERGY_SET_ERROR("can't handle counter_type %d", counter_type);
         return NULL;
     }
-    if (counter_type == X86_ENERGY_COUNTER_SIZE)
-    {
-        X86_ENERGY_SET_ERROR("can't handle counter_type COUNTER_SIZE");
-        return NULL;
-    }
     int given_package = index;
     char* name = sysfs_names[counter_type];
     struct dirent** namelist;
