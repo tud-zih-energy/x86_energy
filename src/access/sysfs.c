@@ -20,9 +20,9 @@
 #include "../include/error.h"
 #include "../include/overflow_thread.h"
 
-#define RAPL_PATH "/sys/class/powercap"
+#define RAPL_PATH "/sys/devices/virtual/powercap/intel-rapl"
 
-static char* sysfs_names[X86_ENERGY_COUNTER_SIZE] = { "package", "core", "dram", "uncore", "psys" };
+static char* sysfs_names[X86_ENERGY_COUNTER_SIZE] = { "package", "core", "dram", "uncore", "psys", NULL };
 
 struct reader_def
 {
@@ -55,7 +55,7 @@ static int init()
         {
             for ( i = 0; i < total_files ; i++ )
             {
-                int read_items = sscanf(namelist[i]->d_name, "intel-rapl:%d:%d", &package, &dummy);
+                int read_items = sscanf(namelist[i]->d_name, "intel-rapl:%d", &package);
                 if (read_items > 0)
                 {
                     break;
@@ -123,62 +123,108 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
             int dummy;
             // first we go through all
             // /sys/class/powercap/intel-rapl\:<N> and /sys/class/powercap/intel-rapl\:<N>:<M>
-            read_items = sscanf(namelist[n]->d_name, "intel-rapl:%d:%d", &package, &dummy);
+            read_items = sscanf(namelist[n]->d_name, "intel-rapl:%d", &package);
             if (read_items <= 0)
                 continue;
             // now we verify that we are using the correct package in
             // /sys/class/powercap/intel-rapl\:<N>/name
-            sprintf(file_name_buffer, "%s/intel-rapl:%d/name", RAPL_PATH, package);
+            sprintf(file_name_buffer, "%s/%s/name", RAPL_PATH, namelist[n]->d_name);
             FILE* fp = fopen(file_name_buffer, "r");
+            // could not open name file -> try next one
             if (fp == NULL)
-                break;
+                continue;
+
+            // read name
             char* buffer = NULL;
             size_t len = 0;
             int read = getline(&buffer, &len, fp);
             fclose(fp);
+            // could not read name? try next one
             if (read <= 0)
             {
-                break;
-            }
-            // remove \n
-            buffer[strlen(buffer) - 1] = '\0';
-            // the content should be package-N
-            if (strncmp(buffer, "package", 7) != 0)
-                break;
-            // try to read real package
-            errno = 0;
-            package = strtol(&buffer[8], NULL, 10);
-            if (package == 0 && errno != 0)
-                break;
-            // not the package we were looking for?
-            if (package != given_package)
                 continue;
-            sprintf(file_name_buffer, "%s/%s/name", RAPL_PATH, namelist[n]->d_name);
-            fp = fopen(file_name_buffer, "r");
-            if (fp == NULL)
-                break;
-
-            buffer = NULL;
-            len = 0;
-            read = getline(&buffer, &len, fp);
-            fclose(fp);
-            if (read <= 0)
-            {
-                break;
             }
             // remove \n
             buffer[strlen(buffer) - 1] = '\0';
-            // packages have indices
-            if (strncmp(buffer, "package", 7) == 0)
-                buffer[7] = '\0';
 
-            if (strcmp(name, buffer) == 0)
+            char final_folder[2048]="\0";
+
+            switch (counter_type)
             {
-                sprintf(file_name_buffer, RAPL_PATH "/%s/energy_uj", namelist[n]->d_name);
+            // psys
+            case X86_ENERGY_COUNTER_PLATFORM:
+            {
+                if (strcmp(name, buffer) == 0)
+                {
+                    sprintf(final_folder, "%s/%s/", RAPL_PATH, namelist[n]->d_name);
+                }
+                break;
+            }
+            // package, cores, dram
+            default:
+            {
+                // the content of RAPL_PATH/package-X/name should be "package-N"
+                if (strncmp(buffer, "package", 7) != 0)
+                    continue;
+                // store for later
+                int path_package=package;
+                // try to read real package, starting at index 8
+                errno = 0;
+                package = strtol(&buffer[strlen("package-")], NULL, 10);
+                if (package == 0 && errno != 0)
+                    break;
+                // not the package we were looking for? try next one
+                if (package != given_package)
+                    continue;
+
+                // package we've been looking for! :)
+
+                // only package in this folder, others in sub-folders ...
+                if (counter_type != X86_ENERGY_COUNTER_PCKG)
+                {
+                    // will not really go to 100, but break before
+                    for (int sub_item=0; sub_item<100;sub_item++)
+                    {
+                        sprintf(file_name_buffer, "%s/%s/%s:%d/name", RAPL_PATH, namelist[n]->d_name,namelist[n]->d_name,sub_item);
+                        fp = fopen(file_name_buffer, "r");
+                        if (fp == NULL)
+                            break;
+
+                        free(buffer);
+                        buffer = NULL;
+                        len = 0;
+                        read = getline(&buffer, &len, fp);
+                        fclose(fp);
+                        if (read <= 0)
+                        {
+                            continue;
+                        }
+                        // remove \n
+                        buffer[strlen(buffer) - 1] = '\0';
+                        // if it is the searched counter
+                        if (strcmp(name, buffer) == 0)
+                        {
+                            sprintf(final_folder, "%s/%s/%s:%d/", RAPL_PATH, namelist[n]->d_name,namelist[n]->d_name,sub_item);
+                            break;
+                        }
+                    }
+                }
+                else {
+                    sprintf(final_folder, "%s/%s/", RAPL_PATH, namelist[n]->d_name);
+
+                }
+                break;
+            }
+            }
+            // now we should have a final folder, or its location is still "\0". check current values
+
+            if (final_folder[0]!='\0')
+            {
+                sprintf(file_name_buffer, "%s/energy_uj", final_folder);
                 final_fp = fopen(file_name_buffer, "r");
                 if (final_fp <= 0)
                     break;
-                sprintf(file_name_buffer, RAPL_PATH "/%s/max_energy_range_uj", namelist[n]->d_name);
+                sprintf(file_name_buffer, "%s/max_energy_range_uj", final_folder);
                 fp = fopen(file_name_buffer, "r");
                 if (fp == NULL)
                     break;
@@ -190,6 +236,7 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
                 final_max = max;
                 break;
             }
+            free(buffer);
         }
         for (n = 0; n < total_files; n++)
             free(namelist[n]);
