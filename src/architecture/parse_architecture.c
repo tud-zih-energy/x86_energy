@@ -594,6 +594,10 @@ x86_energy_architecture_node_t* x86_energy_init_architecture_nodes(void)
             return NULL;
         }
 
+    /* Sort it */
+    sort_children_recursive(sys_node);
+
+
     /* Unfortunately core ids on Linux are not unique, let's make them unique ... */
     int32_t current_core=0;
 
@@ -615,7 +619,6 @@ x86_energy_architecture_node_t* x86_energy_init_architecture_nodes(void)
                 }
                 else
                 {
-                    printf("N\n");
                     for (size_t l=0 ; l < possible_core->nr_children ; l++)
                     {
                          x86_energy_architecture_node_t* core = &possible_core->children[l];
@@ -625,9 +628,6 @@ x86_energy_architecture_node_t* x86_energy_init_architecture_nodes(void)
             }
         }
     }
-
-    /* Sort it */
-    sort_children_recursive(sys_node);
 
     return sys_node;
 }
