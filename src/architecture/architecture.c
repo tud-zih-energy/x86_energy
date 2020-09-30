@@ -444,16 +444,17 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
             free( t );
             return NULL;
         }
+	int current_entry=0;
 
         if ( is_selected_source ( msr_fam23_source ) )
         {
-            t->avail_sources[0] = msr_fam23_source;
+            t->avail_sources[current_entry++] = msr_fam23_source;
         }
 
 #ifdef USEX86_ADAPT
         if ( is_selected_source ( x86a_fam23_source ) )
         {
-            t->avail_sources[1] = x86a_fam23_source;
+            t->avail_sources[current_entry++] = x86a_fam23_source;
         }
 #endif
         return t;
