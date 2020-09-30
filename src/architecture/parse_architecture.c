@@ -172,6 +172,29 @@ static int read_file_long_list(char* file, long int** result, int* length)
     return 0;
 }
 
+static void sort_children(x86_energy_architecture_node_t* node)
+{
+    for (size_t n=node->nr_children; n>1; --n)
+        for (size_t i=0 ; i<n-1 ; ++i)
+        {
+            if (node->children[i].id > node->children[i+1].id)
+            {
+                x86_energy_architecture_node_t tmp=node->children[i];
+                node->children[i] = node->children[i+1];
+                node->children[i+1]=tmp;
+            }
+        }
+}
+
+static void sort_children_recursive(x86_energy_architecture_node_t* node)
+{
+   sort_children(node);
+   for (size_t i=0 ; i < node->nr_children ; i++)
+   {
+       sort_children_recursive(&node->children[i]);
+   }
+}
+
 /*checks for /sys/devices/system/cpu/node/node<n> */
 static int get_nodes(char* sysfs, x86_energy_architecture_node_t** nodes, int* nr_nodes)
 {
@@ -489,6 +512,7 @@ static int process_node(const char* sysfs_path, x86_energy_architecture_node_t* 
             add_cpu_and_core_to_node(sysfs_path, new_parent, cpu);
         free(shared_cpus_l2);
     }
+
     free(cpus);
     return 0;
 }
@@ -569,6 +593,42 @@ x86_energy_architecture_node_t* x86_energy_init_architecture_nodes(void)
             free(nodes);
             return NULL;
         }
+
+    /* Unfortunately core ids on Linux are not unique, let's make them unique ... */
+    int32_t current_core=0;
+
+    for (size_t i=0 ; i < sys_node->nr_children ; i++)
+    {
+        /* count cores per socket */
+        x86_energy_architecture_node_t* socket = &sys_node->children[i];
+        if (socket->granularity == X86_ENERGY_GRANULARITY_DEVICE)
+            continue;
+        for (size_t j=0 ; j < socket->nr_children ; j++)
+        {
+            x86_energy_architecture_node_t* die = &socket->children[j];
+            for (size_t k=0 ; k < die->nr_children ; k++)
+            {
+                x86_energy_architecture_node_t* possible_core = &die->children[k];
+                if (possible_core->granularity == X86_ENERGY_GRANULARITY_CORE)
+                {
+                    possible_core->id = current_core++;
+                }
+                else
+                {
+                    printf("N\n");
+                    for (size_t l=0 ; l < possible_core->nr_children ; l++)
+                    {
+                         x86_energy_architecture_node_t* core = &possible_core->children[l];
+                         core->id = current_core++;
+                    }
+                }
+            }
+        }
+    }
+
+    /* Sort it */
+    sort_children_recursive(sys_node);
+
     return sys_node;
 }
 
