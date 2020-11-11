@@ -39,9 +39,9 @@ struct reader_def
 
 static struct ov_struct x86a_ov;
 
-static double x86a_23_do_read(x86_energy_single_counter_t counter);
+static double do_read(x86_energy_single_counter_t counter);
 
-static int x86a_23_init(void)
+static int init(void)
 {
     memset(&x86a_ov, 0, sizeof(struct ov_struct));
     int ret = x86_adapt_init();
@@ -62,7 +62,7 @@ static int x86a_23_init(void)
 /**
  * TODO fix, more a wild guess here
  */
-static double x86a_23_get_default_unit()
+static double get_default_unit()
 {
 
     static double default_unit = -1.0;
@@ -99,7 +99,7 @@ static double x86a_23_get_default_unit()
     return default_unit;
 }
 
-static x86_energy_single_counter_t x86a_23_setup(enum x86_energy_counter counter_type, size_t index)
+static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, size_t index)
 {
 
     int cpu;
@@ -115,6 +115,41 @@ static x86_energy_single_counter_t x86a_23_setup(enum x86_energy_counter counter
             X86_ENERGY_SET_ERROR("could not get a cpu with granularity socket");
             return NULL;
         }
+
+        // get the die from the given socket
+
+        x86_energy_architecture_node_t* root_node = x86_energy_init_architecture_nodes(); /* has GRANULARITY_SYSTEM */
+        if ( root_node.nr_children == 0 )
+        {
+            X86_ENERGY_SET_ERROR(
+                "Could not find a socket in x86_adapt configuration");
+            return NULL;
+        }
+        int found=-1;
+        for (int i=0;i<root_node.nr_children;i++)
+        {
+            if ( root_node.children[i].granularity == X86_ENERGY_GRANULARITY_SOCKET  && root_node.children[i].id == index)
+            {
+                found = i;
+                break;
+            }
+        }
+        if ( i == -1 )
+        {
+            X86_ENERGY_SET_ERROR(
+                "Could not find socket %d in x86_adapt configuration",index);
+            return NULL;
+        }
+        if ( root_node.children[i].nr_children == 0 )
+        {
+            X86_ENERGY_SET_ERROR(
+                "Could not find die in socket %d in x86_adapt configuration",index);
+            return NULL;
+        }
+        index = root_node.children[i].children[0].id;
+
+        // done translating socket to die, now open x86a
+
         xa_index = x86_adapt_lookup_ci_name(X86_ADAPT_DIE, PKG_REGISTER);
         xa_type = X86_ADAPT_DIE;
         if (xa_index < 0)
@@ -157,7 +192,7 @@ static x86_energy_single_counter_t x86a_23_setup(enum x86_energy_counter counter
         return NULL;
     }
 
-    double unit = x86a_23_get_default_unit();
+    double unit = get_default_unit();
     if (unit < 0.0)
     {
         //    TODO: x86_adapt_put_device
@@ -208,7 +243,7 @@ static x86_energy_single_counter_t x86a_23_setup(enum x86_energy_counter counter
         return NULL;
     }
     def->pkg = index;
-    if (x86_energy_overflow_thread_create(&x86a_ov, cpu, &def->thread, &def->mutex, x86a_23_do_read, def,
+    if (x86_energy_overflow_thread_create(&x86a_ov, cpu, &def->thread, &def->mutex, do_read, def,
                                           30000000))
     {
         free(def);
@@ -223,7 +258,7 @@ static x86_energy_single_counter_t x86a_23_setup(enum x86_energy_counter counter
     return (x86_energy_single_counter_t)def;
 }
 
-static double x86a_23_do_read(x86_energy_single_counter_t counter)
+static double do_read(x86_energy_single_counter_t counter)
 {
     struct reader_def* def = (struct reader_def*)counter;
     uint64_t reading;
@@ -241,10 +276,10 @@ static double x86a_23_do_read(x86_energy_single_counter_t counter)
     return def->unit * def->last_reading;
 }
 
-static void x86a_23_do_close(x86_energy_single_counter_t counter)
+static void do_close(x86_energy_single_counter_t counter)
 {
     struct reader_def* def = (struct reader_def*)counter;
-    x86_energy_overflow_thread_remove_call(&x86a_ov, def->cpu, x86a_23_do_read, counter);
+    x86_energy_overflow_thread_remove_call(&x86a_ov, def->cpu, do_read, counter);
 
     //    TODO: x86_adapt_put_device
     /*if (def->per_core)
@@ -253,15 +288,15 @@ static void x86a_23_do_close(x86_energy_single_counter_t counter)
         x86_adapt_put_device(X86_ADAPT_DIE, def->package);*/
     free(def);
 }
-static void x86a_23_fini(void)
+static void fini(void)
 {
     x86_energy_overflow_thread_killall(&x86a_ov);
     x86_energy_overflow_freeall(&x86a_ov);
 }
 
 x86_energy_access_source_t x86a_fam23_source = {.name = "x86a-rapl-amd",
-                                                .init = x86a_23_init,
-                                                .setup = x86a_23_setup,
-                                                .read = x86a_23_do_read,
-                                                .close = x86a_23_do_close,
-                                                .fini = x86a_23_fini };
+                                                .init = init,
+                                                .setup = setup,
+                                                .read = do_read,
+                                                .close = do_close,
+                                                .fini = fini };
