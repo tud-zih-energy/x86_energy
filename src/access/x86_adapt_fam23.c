@@ -146,7 +146,7 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
                 "Could not find die in socket %d in x86_adapt configuration",index);
             return NULL;
         }
-        index = root_node->children[i].children[0].id;
+        index = root_node->children[found].children[0].id;
 
         // done translating socket to die, now open x86a
 
