@@ -115,6 +115,41 @@ static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, s
             X86_ENERGY_SET_ERROR("could not get a cpu with granularity socket");
             return NULL;
         }
+
+        // get the die from the given socket
+
+        x86_energy_architecture_node_t* root_node = x86_energy_init_architecture_nodes(); /* has GRANULARITY_SYSTEM */
+        if ( root_node.nr_children == 0 )
+        {
+            X86_ENERGY_SET_ERROR(
+                "Could not find a socket in x86_adapt configuration");
+            return NULL;
+        }
+        int found=-1;
+        for (int i=0;i<root_node.nr_children;i++)
+        {
+            if ( root_node.children[i].granularity == X86_ENERGY_GRANULARITY_SOCKET  && root_node.children[i].id == index)
+            {
+                found = i;
+                break;
+            }
+        }
+        if ( i == -1 )
+        {
+            X86_ENERGY_SET_ERROR(
+                "Could not find socket %d in x86_adapt configuration",index);
+            return NULL;
+        }
+        if ( root_node.children[i].nr_children == 0 )
+        {
+            X86_ENERGY_SET_ERROR(
+                "Could not find die in socket %d in x86_adapt configuration",index);
+            return NULL;
+        }
+        index = root_node.children[i].children[0].id;
+
+        // done translating socket to die, now open x86a
+
         xa_index = x86_adapt_lookup_ci_name(X86_ADAPT_DIE, PKG_REGISTER);
         xa_type = X86_ADAPT_DIE;
         if (xa_index < 0)
