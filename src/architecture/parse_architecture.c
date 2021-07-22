@@ -78,11 +78,10 @@ static int read_file_long_list(char* file, long int** result, int* length)
         long int read_cpu = strtol( current_ptr, &next_ptr, 10 );
         if ( next_ptr == current_ptr || errno !=0 )
         {
+            /* set error stream, might be an error, could also be just an empty file, since the numa node is empty */
             X86_ENERGY_SET_ERROR("Could not read next CPU: %s",current_ptr );
-            free(*result);
-            *result = NULL;
-            *length = 0;
-            return 1;
+            /* since we are not sure, we report no error and hope for the best */
+            return 0;
         }
         switch ( *next_ptr )
         {
