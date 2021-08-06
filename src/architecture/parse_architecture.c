@@ -70,18 +70,19 @@ static int read_file_long_list(char* file, long int** result, int* length)
     char* current_ptr = buffer;
     char* next_ptr = NULL;
 
-
+    /* maybe it's just an empty file? */
+    if (*current_ptr == '\n' || *current_ptr == '\0')
+        return 0;
+        
     /*as long as strtol returns something valid, either !=0 or 0 with errno==0 */
     while ( 1 )
     {
         errno = 0;
+        
         long int read_cpu = strtol( current_ptr, &next_ptr, 10 );
         if ( next_ptr == current_ptr || errno !=0 )
         {
-            /* maybe it's just an empty file? */
-            if (*current_ptr == '\n' || *current_ptr == '\0')
-               return 0;
-            /* otherwise sth went wrong */
+            /* sth went wrong */
             X86_ENERGY_SET_ERROR("Could not read next CPU: %s",current_ptr );
             free(*result);
             *result = NULL;
