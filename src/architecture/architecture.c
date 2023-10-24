@@ -246,6 +246,15 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
             supported[X86_ENERGY_COUNTER_DRAM] = true;
             is_intel = true;
             break;
+        /* Alderlake */
+        case 0x97:
+        case 0x9a:
+        case 0xbf:
+            supported[X86_ENERGY_COUNTER_PCKG] = true;
+            supported[X86_ENERGY_COUNTER_CORES] = true;
+            supported[X86_ENERGY_COUNTER_GPU] = true;
+            is_intel = true;
+            break;
         case 0x8e:
             supported[X86_ENERGY_COUNTER_PCKG] = true;
             supported[X86_ENERGY_COUNTER_CORES] = true;
