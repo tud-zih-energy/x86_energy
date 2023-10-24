@@ -252,11 +252,11 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
             supported[X86_ENERGY_COUNTER_DRAM] = true;
             supported[X86_ENERGY_COUNTER_GPU] = true;
             supported[X86_ENERGY_COUNTER_PLATFORM] = true;
-            is_intel = true;
             break;
         case 0x8f:
             supported[X86_ENERGY_COUNTER_PCKG] = true;
             supported[X86_ENERGY_COUNTER_DRAM] = true;
+            is_intel = true;
         /* none of the above */
         default:
         	X86_ENERGY_SET_ERROR("Not a recognized Intel processor (family 0x%x, model 0x%x)", cpu_family, cpu_model);
