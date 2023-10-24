@@ -255,17 +255,21 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
             supported[X86_ENERGY_COUNTER_GPU] = true;
             is_intel = true;
             break;
+        /* Coffee Lake */
         case 0x8e:
             supported[X86_ENERGY_COUNTER_PCKG] = true;
             supported[X86_ENERGY_COUNTER_CORES] = true;
             supported[X86_ENERGY_COUNTER_DRAM] = true;
             supported[X86_ENERGY_COUNTER_GPU] = true;
             supported[X86_ENERGY_COUNTER_PLATFORM] = true;
+            is_intel = true;
             break;
+        /* Sapphire Rapids */
         case 0x8f:
             supported[X86_ENERGY_COUNTER_PCKG] = true;
             supported[X86_ENERGY_COUNTER_DRAM] = true;
             is_intel = true;
+            break;
         /* none of the above */
         default:
         	X86_ENERGY_SET_ERROR("Not a recognized Intel processor (family 0x%x, model 0x%x)", cpu_family, cpu_model);
