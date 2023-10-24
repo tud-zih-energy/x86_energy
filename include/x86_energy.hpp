@@ -14,6 +14,7 @@
 #include <string>
 #include <system_error>
 #include <vector>
+#include <cstdint>
 
 extern "C"
 {
