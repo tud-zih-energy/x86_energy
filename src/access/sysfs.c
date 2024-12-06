@@ -22,7 +22,7 @@
 
 #define RAPL_PATH "/sys/class/powercap"
 
-static char* sysfs_names[X86_ENERGY_COUNTER_SIZE] = { "package", "core", "dram", "uncore", "psys" };
+static char* sysfs_names[X86_ENERGY_COUNTER_SIZE] = { "package", "core", "dram", "uncore", "psys", "core" };
 
 struct reader_def
 {
@@ -84,23 +84,35 @@ static int init()
 
 static x86_energy_single_counter_t setup(enum x86_energy_counter counter_type, size_t index)
 {
-    int cpu = get_test_cpu(X86_ENERGY_GRANULARITY_SOCKET, index);
-    if (cpu < 0)
-    {
-        X86_ENERGY_APPEND_ERROR("could not find a cpu with granularity socket");
-        return NULL;
-    }
     switch (counter_type)
     {
-    case X86_ENERGY_COUNTER_PCKG:  /* fall-through */
-    case X86_ENERGY_COUNTER_CORES: /* fall-through */
-    case X86_ENERGY_COUNTER_DRAM:  /* fall-through */
-    case X86_ENERGY_COUNTER_GPU:   /* fall-through */
-    case X86_ENERGY_COUNTER_PLATFORM:
+    case X86_ENERGY_COUNTER_PCKG:     /* fall-through */
+    case X86_ENERGY_COUNTER_CORES:    /* fall-through */
+    case X86_ENERGY_COUNTER_DRAM:     /* fall-through */
+    case X86_ENERGY_COUNTER_GPU:      /* fall-through */
+    case X86_ENERGY_COUNTER_PLATFORM: /* fall-through */
+    case X86_ENERGY_COUNTER_SINGLE_CORE: 
         break;
     default:
         X86_ENERGY_SET_ERROR("can't handle counter_type %d", counter_type);
         return NULL;
+    }
+
+    int cpu;
+    if ( counter_type != X86_ENERGY_COUNTER_SINGLE_CORE ) {
+        cpu = get_test_cpu(X86_ENERGY_GRANULARITY_SOCKET, index);
+        if (cpu < 0)
+        {
+            X86_ENERGY_APPEND_ERROR("could not find a cpu with granularity socket");
+            return NULL;
+        }
+    } else {
+        cpu = get_test_cpu(X86_ENERGY_GRANULARITY_CORE, index);
+        if (cpu < 0)
+        {
+            X86_ENERGY_APPEND_ERROR("could not find a cpu with granularity core");
+            return NULL;
+        }
     }
     int given_package = index;
     char* name = sysfs_names[counter_type];

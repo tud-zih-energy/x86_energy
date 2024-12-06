@@ -283,12 +283,16 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
         {
             is_amd = true;
             supported[X86_ENERGY_COUNTER_PCKG] = true;
-        } else if ( ( cpu_family == 0x17 ) ||
-		    ( cpu_family == 0x19 ) )
+        } else if ( cpu_family == 0x17 )
         {
             is_amd_rapl = true;
             supported[X86_ENERGY_COUNTER_PCKG] = true;
             supported[X86_ENERGY_COUNTER_SINGLE_CORE] = true;
+        }  else if ( cpu_family == 0x19 )
+        {
+            is_amd_rapl = true;
+            supported[X86_ENERGY_COUNTER_PCKG] = true;
+            supported[X86_ENERGY_COUNTER_CORES] = true;
         } else
         {
         	X86_ENERGY_SET_ERROR("Not a recognized AMD processor (family 0x%x, model 0x%x)", cpu_family, cpu_model);
@@ -433,8 +437,10 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
         t->name = "AMD RAPL";
         for (int i = 0; i < X86_ENERGY_COUNTER_SIZE; i++)
             t->source_granularities[i] = X86_ENERGY_GRANULARITY_SIZE;
-
-        t->source_granularities[X86_ENERGY_COUNTER_SINGLE_CORE] = X86_ENERGY_GRANULARITY_CORE;
+        if ( supported[X86_ENERGY_COUNTER_SINGLE_CORE] )
+            t->source_granularities[X86_ENERGY_COUNTER_SINGLE_CORE] = X86_ENERGY_GRANULARITY_CORE;
+        if ( supported[X86_ENERGY_COUNTER_CORES] )
+            t->source_granularities[X86_ENERGY_COUNTER_CORES] = X86_ENERGY_GRANULARITY_SOCKET;
         t->source_granularities[X86_ENERGY_COUNTER_PCKG] = X86_ENERGY_GRANULARITY_SOCKET;
 
         t->nr_avail_sources = 0;
