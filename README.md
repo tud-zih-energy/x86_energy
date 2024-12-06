@@ -92,7 +92,7 @@ You can enforce a specific interface by setting the environment variable `X86_EN
 
  - `likwid-rapl` selects RAPL measurement via likwid
  - `msr-rapl` selects RAPL measurement via msr/msr-safe
- - `sysfs-rapl` selects RAPL measurement via powercap-rapl sysfs entries
+ - `sysfs-powercap-rapl` selects RAPL measurement via powercap-rapl sysfs entries
  - `x86a-rapl` selects RAPL measurement via x86_adapt
  - `sysfs-Fam15h` selects RAPL measurement via fam15h_power sysfs entries
  - `msr-rapl-fam23` selects AMD RAPL measurement via msr
