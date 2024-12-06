@@ -255,17 +255,21 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
             supported[X86_ENERGY_COUNTER_GPU] = true;
             is_intel = true;
             break;
+        /* Coffee Lake */
         case 0x8e:
             supported[X86_ENERGY_COUNTER_PCKG] = true;
             supported[X86_ENERGY_COUNTER_CORES] = true;
             supported[X86_ENERGY_COUNTER_DRAM] = true;
             supported[X86_ENERGY_COUNTER_GPU] = true;
             supported[X86_ENERGY_COUNTER_PLATFORM] = true;
+            is_intel = true;
             break;
+        /* Sapphire Rapids */
         case 0x8f:
             supported[X86_ENERGY_COUNTER_PCKG] = true;
             supported[X86_ENERGY_COUNTER_DRAM] = true;
             is_intel = true;
+            break;
         /* none of the above */
         default:
         	X86_ENERGY_SET_ERROR("Not a recognized Intel processor (family 0x%x, model 0x%x)", cpu_family, cpu_model);
@@ -279,7 +283,8 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
         {
             is_amd = true;
             supported[X86_ENERGY_COUNTER_PCKG] = true;
-        } else if ( cpu_family == 0x17 )
+        } else if ( ( cpu_family == 0x17 ) ||
+		    ( cpu_family == 0x19 ) )
         {
             is_amd_rapl = true;
             supported[X86_ENERGY_COUNTER_PCKG] = true;
@@ -437,6 +442,17 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
         {
             t->nr_avail_sources += 1;
         }
+
+        if ( is_selected_source ( sysfs_source ) )
+        {
+            t->nr_avail_sources += 1;
+        }
+
+        if ( is_selected_source ( perf_source ) )
+        {
+            t->nr_avail_sources += 1;
+        }
+
 #ifdef USEX86_ADAPT
         if ( is_selected_source ( x86a_fam23_source ) )
         {
@@ -462,6 +478,19 @@ x86_energy_mechanisms_t* x86_energy_get_avail_mechanism(void)
         {
             t->avail_sources[current_entry++] = msr_fam23_source;
         }
+
+	if ( is_selected_source ( sysfs_source ) )
+        {
+            t->avail_sources[current_entry++] = sysfs_source;
+        }
+
+	if ( is_selected_source ( perf_source ) )
+        {
+            t->avail_sources[current_entry++] = perf_source;
+        }
+
+
+
 
 #ifdef USEX86_ADAPT
         if ( is_selected_source ( x86a_fam23_source ) )
